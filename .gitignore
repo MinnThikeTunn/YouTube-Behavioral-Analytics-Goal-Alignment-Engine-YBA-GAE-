@@ -1,0 +1,54 @@
+# Private User Data & Takeout Files
+watch-history.json
+*.json.takeout
+scratch/
+backend/data/
+backend/data/uploads/
+backend/data/*.db
+
+# API Keys & Secrets
+.env
+.env.*
+!.env.example
+
+# SQLite Databases & Storage
+*.db
+*.sqlite
+*.sqlite3
+backend/app.db
+
+# Python & FastAPI
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Node.js & React Vite Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+*.tsbuildinfo
+.npm
+.eslintcache
+
+# IDEs & System Files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Agent & CLI Artifacts
+.agents/
+.scratch/
