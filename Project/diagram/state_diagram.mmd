@@ -1,0 +1,126 @@
+%% Mermaid State Diagram: YouTube Behavioral Analytics & Goal Alignment Predictor
+%% System Lifecycle, Job State Transitions & Core Engine Execution (v1.0)
+
+stateDiagram-v2
+    direction TB
+
+    [*] --> Idle
+
+    %% =========================================================================
+    %% IDLE / FRONTEND INPUT STATE
+    %% =========================================================================
+    state Idle {
+        [*] --> AwaitingInput
+        AwaitingInput --> FileSelected : onDrop(files)
+        FileSelected --> GoalSpecified : input goal_text
+        GoalSpecified --> FormSubmitted : handleSubmit()
+    }
+
+    Idle --> QUEUED : ApiClient.uploadHistory() / UploadController.upload_watch_history()
+
+    %% =========================================================================
+    %% QUEUED STATE (Job Enqueued in Task Queue)
+    %% =========================================================================
+    state QUEUED {
+        [*] --> JobCreatedDB : Job model inserted (status=QUEUED)
+        JobCreatedDB --> DispatchedToQueue : PipelineTaskWorker.enqueue_job()
+        DispatchedToQueue --> WaitingForWorker : Pending worker pickup
+    }
+
+    QUEUED --> PROCESSING : PipelineTaskWorker.execute_processing_pipeline()
+
+    %% =========================================================================
+    %% PROCESSING COMPOSITE STATE (Pipeline Stages)
+    %% =========================================================================
+    state PROCESSING {
+        direction TB
+        
+        [*] --> EntryParsingAndClassification
+
+        %% Step 1: Parsing & Entry Classification
+        state EntryParsingAndClassification {
+            [*] --> ParsingRawJSON
+            ParsingRawJSON --> ClassifyingRecordType : EntryClassifier.classify_record()
+            ClassifyingRecordType --> FilteringVideoEvents : EntryClassifier.filter_video_records()
+            FilteringVideoEvents --> ExtractingVideoIDs : EntryClassifier.extract_video_id()
+            ExtractingVideoIDs --> PersistingRawRecords : Bulk Save RawRecord ORM
+        }
+
+        EntryParsingAndClassification --> APIEnrichmentAndQuota : Progress updated to 10%
+
+        %% Step 2: YouTube API Batch Enrichment & Quota Management
+        state APIEnrichmentAndQuota {
+            [*] --> CheckingQuotaAvailability : QuotaManager.check_quota_available()
+            CheckingQuotaAvailability --> BatchFetchingMetadata : Quota Available
+            BatchFetchingMetadata --> FetchingVideoDetails : YouTubeAPIService.batch_fetch_videos()
+            FetchingVideoDetails --> ParsingDurations : YouTubeAPIService.parse_iso8601_duration()
+            ParsingDurations --> FetchingChannelDetails : YouTubeAPIService.batch_fetch_channels()
+            FetchingChannelDetails --> TrackingQuotaUsage : QuotaManager.track_usage()
+            TrackingQuotaUsage --> PersistingEnrichedData : Save EnrichedVideo & EnrichedChannel
+        }
+
+        APIEnrichmentAndQuota --> ProxyMetricsCalculation : Progress updated to 50%
+
+        %% Step 3: Behavioral Proxy Metrics Derivation
+        state ProxyMetricsCalculation {
+            [*] --> FetchingRecordsAndDurations : Query RawRecord & EnrichedVideo
+            FetchingRecordsAndDurations --> CalculatingCompletionProb : ProxyMetricsEngine.calculate_completion_probability()
+            CalculatingCompletionProb --> CalculatingFocusRatio : ProxyMetricsEngine.calculate_focus_ratio()
+            CalculatingFocusRatio --> CalculatingSessionDensity : ProxyMetricsEngine.calculate_session_density()
+            CalculatingSessionDensity --> CalculatingCircadianScore : ProxyMetricsEngine.calculate_circadian_score()
+            CalculatingCircadianScore --> PersistingComputedMetrics : Save ComputedMetric ORM
+        }
+
+        ProxyMetricsCalculation --> GoalAlignmentScoring : Progress updated to 85%
+
+        %% Step 4: Semantic Embedding & Goal Alignment
+        state GoalAlignmentScoring {
+            [*] --> EmbeddingUserGoal : GoalAlignmentEngine.compute_text_embedding()
+            EmbeddingUserGoal --> EmbeddingVideoContext : GoalAlignmentEngine.compute_video_context_vector()
+            EmbeddingVideoContext --> CosineSimilarityCalculation : GoalAlignmentEngine.calculate_cosine_similarity()
+            CosineSimilarityCalculation --> PersistingAlignmentScore : Save GoalAlignmentScore ORM
+        }
+
+        GoalAlignmentScoring --> PipelineExecutionComplete
+    }
+
+    %% =========================================================================
+    %% QUOTA PAUSED STATE (Handling Daily API Unit Limits)
+    %% =========================================================================
+    PROCESSING --> QUOTA_PAUSED : YouTube API Quota Exceeded (10k units/day)
+    state QUOTA_PAUSED {
+        [*] --> QuotaLimitReached
+        QuotaLimitReached --> WaitingForDailyReset : Sleep until reset_at timestamp
+        WaitingForDailyReset --> ResettingQuota : QuotaManager.reset_daily_quota()
+    }
+    QUOTA_PAUSED --> PROCESSING : Quota Reset Complete / Resume Pipeline
+
+    %% =========================================================================
+    %% FAILURE STATE
+    %% =========================================================================
+    PROCESSING --> FAILED : Exception / Invalid File / Processing Error
+    state FAILED {
+        [*] --> ErrorLogged
+        ErrorLogged --> JobStatusFailed : Job model status updated to FAILED
+    }
+
+    %% =========================================================================
+    %% COMPLETED COMPOSITE STATE & FRONTEND DASHBOARD RENDERING
+    %% =========================================================================
+    PROCESSING --> COMPLETED : Progress updated to 100% (JobStatus.COMPLETED)
+    
+    state COMPLETED {
+        [*] --> PollingSuccessReceived : DashboardComponent detects COMPLETED via ApiClient.pollStatus()
+        PollingSuccessReceived --> FetchingAnalyticsData : ApiClient.fetchAnalytics() / AnalyticsController.get_analytics_results()
+        FetchingAnalyticsData --> GeneratingRecommendations : RecommendationEngine.generate_channel_recommendations()
+        GeneratingRecommendations --> DashboardRendering : DashboardComponent active
+        
+        state DashboardRendering {
+            [*] --> RenderingMetrics : DashboardComponent.renderMetricCards()
+            RenderingMetrics --> RenderingCircadian : DashboardComponent.renderCircadianChart()
+            RenderingCircadian --> RenderingRecommendations : DashboardComponent.renderRecommendations()
+        }
+    }
+
+    COMPLETED --> [*]
+    FAILED --> [*]

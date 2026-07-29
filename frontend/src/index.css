@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+}
+
+.perplexity-card {
+  @apply rounded-[32px] border border-slate-200/80 dark:border-zinc-800/80 bg-white/70 dark:bg-[#1c1d1f]/80 backdrop-blur-md shadow-sm transition-all duration-200 hover:shadow-md;
+}

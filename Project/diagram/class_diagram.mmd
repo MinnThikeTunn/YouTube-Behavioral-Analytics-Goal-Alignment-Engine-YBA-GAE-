@@ -1,0 +1,274 @@
+%% Mermaid Class Diagram: YouTube Behavioral Analytics & Goal Alignment Predictor
+%% System Architecture & Class Specifications (v1.0)
+
+classDiagram
+    direction TB
+
+    %% ==========================================
+    %% ENUMS & TYPES
+    %% ==========================================
+    class RecordType {
+        <<enumeration>>
+        VIDEO
+        COMMUNITY_POST
+        AD
+        NON_VIEWING_ACTIVITY
+        INACCESSIBLE_VIDEO
+    }
+
+    class JobStatus {
+        <<enumeration>>
+        QUEUED
+        PROCESSING
+        QUOTA_PAUSED
+        COMPLETED
+        FAILED
+    }
+
+    %% ==========================================
+    %% PERSISTENCE LAYER (SQLAlchemy ORM Models)
+    %% ==========================================
+    class Job {
+        <<orm_model>>
+        +String id PK
+        +JobStatus status
+        +Integer total_records
+        +Integer video_records
+        +Integer community_post_records
+        +Integer ad_records
+        +Integer non_viewing_records
+        +String goal_text
+        +Float progress_pct
+        +DateTime created_at
+        +DateTime completed_at
+    }
+
+    class RawRecord {
+        <<orm_model>>
+        +Integer id PK
+        +String job_id FK
+        +DateTime timestamp
+        +String raw_title
+        +String title_url
+        +String video_id
+        +RecordType record_type
+    }
+
+    class EnrichedVideo {
+        <<orm_model>>
+        +String video_id PK
+        +String channel_id FK
+        +String video_title
+        +String video_description
+        +String tags_json
+        +String category_id
+        +Integer duration_seconds
+        +String topic_categories_json
+        +DateTime cached_at
+    }
+
+    class EnrichedChannel {
+        <<orm_model>>
+        +String channel_id PK
+        +String channel_title
+        +String channel_description
+        +String topic_categories_json
+        +DateTime cached_at
+    }
+
+    class ComputedMetric {
+        <<orm_model>>
+        +Integer id PK
+        +String job_id FK
+        +Float focus_ratio
+        +Float median_completion_prob
+        +Float session_density
+        +Float circadian_score
+        +String window_period
+        +DateTime calculated_at
+    }
+
+    class GoalAlignmentScore {
+        <<orm_model>>
+        +Integer id PK
+        +String job_id FK
+        +Float alignment_probability_score
+        +Float focus_ratio_weight
+        +Float completion_weight
+        +Float session_density_penalty
+        +Float circadian_penalty
+        +DateTime calculated_at
+    }
+
+    %% ORM Relationships
+    Job "1" *-- "0..*" RawRecord : contains
+    Job "1" *-- "0..1" ComputedMetric : produces
+    Job "1" *-- "0..1" GoalAlignmentScore : scores
+    EnrichedChannel "1" o-- "0..*" EnrichedVideo : owns
+
+    %% ==========================================
+    %% CORE SERVICE ENGINES (Python Services)
+    %% ==========================================
+    class EntryClassifier {
+        <<service>>
+        +classify_record(raw_dict: dict) RecordType
+        +filter_video_records(raw_records: List~dict~) List~RawRecord~
+        -extract_video_id(url: String) String
+    }
+
+    class QuotaManager {
+        <<service>>
+        +Integer MAX_DAILY_QUOTA = 10000
+        -Integer cumulative_units
+        -DateTime reset_at
+        +track_usage(units: Integer) Boolean
+        +check_quota_available(requested_units: Integer) Boolean
+        +reset_daily_quota() Void
+    }
+
+    class YouTubeAPIService {
+        <<service>>
+        -String api_key
+        -QuotaManager quota_manager
+        +batch_fetch_videos(video_ids: List~String~) List~EnrichedVideo~
+        +batch_fetch_channels(channel_ids: List~String~) List~EnrichedChannel~
+        -parse_iso8601_duration(duration_str: String) Integer
+    }
+
+    class ProxyMetricsEngine {
+        <<service>>
+        +Float session_boundary_minutes = 30.0
+        +Float high_density_threshold = 15.0
+        +calculate_completion_probability(records: List~RawRecord~, video_map: Map) List~Float~
+        +calculate_focus_ratio(aligned_clicks: Integer, total_clicks: Integer) Float
+        +calculate_session_density(clicks: Integer, duration_hours: Float) Float
+        +calculate_circadian_score(records: List~RawRecord~) Float
+        +compute_job_metrics(job_id: String) ComputedMetric
+    }
+
+    class GoalAlignmentEngine {
+        <<service>>
+        +String model_name = "all-MiniLM-L6-v2"
+        -Object embedding_model
+        -Float weight_channel = 0.40
+        -Float weight_topic = 0.35
+        -Float weight_video = 0.25
+        +compute_text_embedding(text: String) ndarray
+        +compute_video_context_vector(video: EnrichedVideo, channel: EnrichedChannel) ndarray
+        +calculate_cosine_similarity(vec1: ndarray, vec2: ndarray) Float
+        +evaluate_alignment_score(job_id: String, goal_text: String) GoalAlignmentScore
+    }
+
+    class RecommendationEngine {
+        <<service>>
+        -GoalAlignmentEngine alignment_engine
+        +generate_channel_recommendations(job_id: String, goal_text: String, top_k: Integer) List~EnrichedChannel~
+    }
+
+    %% Service Dependencies
+    YouTubeAPIService --> QuotaManager : uses
+    RecommendationEngine --> GoalAlignmentEngine : uses
+    ProxyMetricsEngine ..> RawRecord : evaluates
+    ProxyMetricsEngine ..> EnrichedVideo : references
+    GoalAlignmentEngine ..> EnrichedVideo : embeds
+    GoalAlignmentEngine ..> EnrichedChannel : embeds
+
+    %% ==========================================
+    %% WORKER & TASK QUEUE
+    %% ==========================================
+    class PipelineTaskWorker {
+        <<background_worker>>
+        -EntryClassifier classifier
+        -YouTubeAPIService api_service
+        -ProxyMetricsEngine proxy_engine
+        -GoalAlignmentEngine alignment_engine
+        +enqueue_job(file_path: String, goal_text: String) String
+        +execute_processing_pipeline(job_id: String) Void
+        -update_progress(job_id: String, progress: Float) Void
+    }
+
+    PipelineTaskWorker --> EntryClassifier : invokes
+    PipelineTaskWorker --> YouTubeAPIService : invokes
+    PipelineTaskWorker --> ProxyMetricsEngine : invokes
+    PipelineTaskWorker --> GoalAlignmentEngine : invokes
+    PipelineTaskWorker --> Job : updates
+
+    %% ==========================================
+    %% API CONTROLLERS & SCHEMAS (FastAPI)
+    %% ==========================================
+    class UploadController {
+        <<api_router>>
+        +upload_watch_history(file: UploadFile, goal: String) UploadResponseDTO
+    }
+
+    class JobController {
+        <<api_router>>
+        +get_job_status(job_id: String) JobStatusResponseDTO
+    }
+
+    class AnalyticsController {
+        <<api_router>>
+        +get_analytics_results(job_id: String) AnalyticsResultDTO
+    }
+
+    class UploadResponseDTO {
+        <<pydantic_schema>>
+        +String job_id
+        +JobStatus status
+        +String message
+        +DateTime created_at
+    }
+
+    class JobStatusResponseDTO {
+        <<pydantic_schema>>
+        +String job_id
+        +JobStatus status
+        +Float progress_pct
+        +Integer total_records
+        +Integer video_records
+    }
+
+    class AnalyticsResultDTO {
+        <<pydantic_schema>>
+        +String job_id
+        +ComputedMetric metrics
+        +GoalAlignmentScore alignment_score
+        +List~EnrichedChannel~ recommendations
+    }
+
+    UploadController ..> PipelineTaskWorker : dispatches
+    UploadController ..> UploadResponseDTO : returns
+    JobController ..> Job : queries
+    JobController ..> JobStatusResponseDTO : returns
+    AnalyticsController ..> ComputedMetric : queries
+    AnalyticsController ..> GoalAlignmentScore : queries
+    AnalyticsController ..> AnalyticsResultDTO : returns
+
+    %% ==========================================
+    %% FRONTEND CLIENT (React + TypeScript)
+    %% ==========================================
+    class ApiClient {
+        <<frontend_service>>
+        +uploadHistory(file: File, goal: String) Promise~UploadResponseDTO~
+        +pollStatus(jobId: String) Promise~JobStatusResponseDTO~
+        +fetchAnalytics(jobId: String) Promise~AnalyticsResultDTO~
+    }
+
+    class FileUploaderComponent {
+        <<react_component>>
+        -File selectedFile
+        -String selectedGoal
+        +onDrop(files: File[]) Void
+        +handleSubmit() Void
+    }
+
+    class DashboardComponent {
+        <<react_component>>
+        -AnalyticsResultDTO analyticsData
+        +renderMetricCards() JSX
+        +renderCircadianChart() JSX
+        +renderRecommendations() JSX
+    }
+
+    FileUploaderComponent --> ApiClient : uses
+    DashboardComponent --> ApiClient : uses
