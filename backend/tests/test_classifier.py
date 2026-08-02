@@ -12,6 +12,12 @@ def test_extract_video_id():
     assert EntryClassifier.extract_video_id("https://www.youtube.com/channel/UC123") is None
     assert EntryClassifier.extract_video_id(None) is None
 
+def test_extract_channel_info():
+    subtitles = [{"name": "freeCodeCamp.org", "url": "https://www.youtube.com/channel/UC8butISFwT-Wl7EV0hUK0BQ"}]
+    cid, name = EntryClassifier.extract_channel_info(subtitles)
+    assert cid == "UC8butISFwT-Wl7EV0hUK0BQ"
+    assert name == "freeCodeCamp.org"
+
 def test_classify_video_record():
     raw = {
         "header": "YouTube",

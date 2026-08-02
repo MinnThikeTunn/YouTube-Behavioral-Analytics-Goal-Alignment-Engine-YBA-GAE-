@@ -7,6 +7,15 @@ export interface UploadResponseDTO {
   created_at: string;
 }
 
+export interface JobLogDTO {
+  id: number;
+  timestamp: string;
+  stage: string;
+  level: 'INFO' | 'CALCULATION' | 'SUCCESS' | 'WARNING' | 'ERROR';
+  message: string;
+  details_json?: string;
+}
+
 export interface JobStatusResponseDTO {
   job_id: string;
   status: JobStatus;
@@ -18,6 +27,7 @@ export interface JobStatusResponseDTO {
   non_viewing_records: number;
   error_message?: string;
   completed_at?: string;
+  logs?: JobLogDTO[];
 }
 
 export interface ComputedMetricDTO {
@@ -37,15 +47,44 @@ export interface GoalAlignmentScoreDTO {
 }
 
 export interface RecommendedChannelDTO {
-  channel_id: string;
+  channel_id?: string;
   channel_title: string;
   channel_description?: string;
   similarity_score: number;
+  category?: 'watched' | 'discovery';
+  channel_url?: string;
+}
+
+export interface TopicCategoryBreakdownDTO {
+  category_name: string;
+  count: number;
+  percentage: number;
+  color: string;
+}
+
+export interface HourlyAlignmentDTO {
+  hour: number;
+  formatted_hour: string;
+  avg_similarity: number;
+  click_count: number;
+}
+
+export interface BehavioralNudgeDTO {
+  nudge_type: 'switching_alert' | 'focus_goalpost' | 'circadian_alert';
+  severity: 'warning' | 'info' | 'action';
+  title: string;
+  message: string;
+  swap_count?: number;
 }
 
 export interface AnalyticsResultDTO {
   job_id: string;
+  goal_text?: string;
   metrics?: ComputedMetricDTO;
   alignment_score?: GoalAlignmentScoreDTO;
   recommendations: RecommendedChannelDTO[];
+  categories?: TopicCategoryBreakdownDTO[];
+  hourly_heatmap?: HourlyAlignmentDTO[];
+  nudges?: BehavioralNudgeDTO[];
 }
+

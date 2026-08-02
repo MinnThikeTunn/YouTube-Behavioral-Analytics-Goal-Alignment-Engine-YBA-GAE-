@@ -4,22 +4,28 @@ import { MetricBadge } from '../common/MetricBadge';
 import { Clock } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
+import { HourlyAlignmentDTO } from '../../types';
+
 interface CircadianChartProps {
   circadianScore: number;
+  hourlyData?: HourlyAlignmentDTO[];
 }
 
-export const CircadianChart: React.FC<CircadianChartProps> = ({ circadianScore }) => {
-  // Generate sample 24-hour distribution pattern for visualization
-  const data = Array.from({ length: 24 }, (_, hour) => {
-    const isLateNight = hour >= 23 || hour < 5;
-    const baseCount = isLateNight ? Math.round(circadianScore * 0.4) : Math.round((100 - circadianScore) * 0.3);
-    const mockVal = Math.max(2, baseCount + (hour % 5) * 2);
-    return {
-      hour: `${hour.toString().padStart(2, '0')}:00`,
-      clicks: mockVal,
-      isLateNight,
-    };
-  });
+export const CircadianChart: React.FC<CircadianChartProps> = ({ circadianScore, hourlyData = [] }) => {
+  const data = hourlyData.length > 0
+    ? hourlyData.map((h) => ({
+        hour: h.formatted_hour,
+        clicks: h.click_count,
+        isLateNight: h.hour >= 23 || h.hour < 5,
+      }))
+    : Array.from({ length: 24 }, (_, hour) => {
+        const isLateNight = hour >= 23 || hour < 5;
+        return {
+          hour: `${hour.toString().padStart(2, '0')}:00`,
+          clicks: 0,
+          isLateNight,
+        };
+      });
 
   return (
     <Card className="p-8">

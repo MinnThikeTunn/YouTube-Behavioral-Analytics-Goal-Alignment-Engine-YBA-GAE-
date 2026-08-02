@@ -2,7 +2,7 @@
 
 **Version:** 1.0  
 **Status:** Approved / Ready for Agent (`ready-for-agent`)  
-**Target Stack:** React 18 (Vite, TypeScript, Tailwind CSS) + FastAPI (Python 3.10+, SQLite, `sentence-transformers`)  
+**Target Stack:** React 18 (Vite, TypeScript, Tailwind CSS) + FastAPI (Python 3.10+, SQLite, `sentence-transformers`)
 **Execution Mode:** Non-Containerized Native OS Execution  
 **Design Aesthetic:** High-End Minimalist 'Perplexity' Aesthetic (`rounded-[32px]` containers, `font-black` headings, Dark/Light contrast mode, `[Observed]` vs `[Estimated]` metric badges)
 

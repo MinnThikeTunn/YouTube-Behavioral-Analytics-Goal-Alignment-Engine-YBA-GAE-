@@ -26,7 +26,9 @@ def test_youtube_api_batching():
     # Generate 120 dummy video IDs
     video_ids = [f"vid_{i:03d}" for i in range(120)]
     
-    mock_execute = MagicMock(return_value={
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
         "items": [
             {
                 "id": "vid_000",
@@ -41,17 +43,13 @@ def test_youtube_api_batching():
                 "topicDetails": {"topicCategories": ["https://en.wikipedia.org/wiki/Technology"]}
             }
         ]
-    })
-    
-    mock_videos_list = MagicMock(return_value=MagicMock(execute=mock_execute))
-    mock_client = MagicMock()
-    mock_client.videos.return_value.list = mock_videos_list
+    }
 
-    with patch.object(service, "_get_youtube_client", return_value=mock_client):
+    with patch("httpx.get", return_value=mock_response) as mock_get:
         results = service.batch_fetch_videos(video_ids)
 
         # 120 video IDs in 50-ID chunks = 3 API calls (50, 50, 20)
-        assert mock_videos_list.call_count == 3
+        assert mock_get.call_count == 3
         assert qm.cumulative_units == 3
         assert len(results) > 0
         assert results[0]["video_id"] == "vid_000"

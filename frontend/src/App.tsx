@@ -78,7 +78,7 @@ export const App: React.FC = () => {
           <DashboardPage
             analytics={analytics}
             jobStatus={completedJob}
-            goalText="Software Engineering"
+            goalText={analytics.goal_text || "Software Engineering"}
             onReset={handleReset}
           />
         )}
