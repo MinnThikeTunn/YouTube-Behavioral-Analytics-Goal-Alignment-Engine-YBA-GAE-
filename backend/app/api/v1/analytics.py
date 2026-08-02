@@ -68,17 +68,22 @@ def build_hourly_heatmap(db: Session, job_id: str, goal_text: str) -> List[Hourl
         if title_clean:
             hourly_records[h].append(title_clean)
 
+    # Single batched vector similarity calculation across all titles in job
+    all_clean_titles = [t for titles in hourly_records.values() for t in titles]
+    sim_map = GoalAlignmentEngine._compute_text_similarities(goal_text, all_clean_titles) if (goal_text and goal_text.strip()) else {}
+
     result = []
     for h in range(24):
         titles = hourly_records[h]
         click_cnt = len(titles)
         if click_cnt > 0 and goal_text and goal_text.strip():
-            sim_map = GoalAlignmentEngine._compute_text_similarities(goal_text, titles)
             sims = [sim_map.get(t, 0.0) for t in titles]
             raw_avg = float(np.mean(sims)) if sims else 0.0
-            # Scale raw similarity against GoalAlignmentEngine.SIMILARITY_THRESHOLD (0.20)
             threshold = GoalAlignmentEngine.SIMILARITY_THRESHOLD
-            scaled_avg = min(100.0, max(0.0, (raw_avg / threshold) * 100.0))
+            if raw_avg >= threshold:
+                scaled_avg = min(100.0, max(0.0, (raw_avg / 0.35) * 100.0))
+            else:
+                scaled_avg = 0.0
             avg_sim = round(scaled_avg, 1)
         else:
             avg_sim = 0.0
@@ -205,6 +210,7 @@ def get_analytics_results(job_id: str, db: Session = Depends(get_db)):
 
     return AnalyticsResultDTO(
         job_id=job.id,
+        goal_text=goal_text,
         metrics=metrics_dto,
         alignment_score=alignment_dto,
         recommendations=recommendations_dto,

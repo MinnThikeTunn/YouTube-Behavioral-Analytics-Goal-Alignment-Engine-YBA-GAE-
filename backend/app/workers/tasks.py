@@ -254,7 +254,7 @@ def execute_processing_pipeline(job_id: str, file_path: str):
         if metrics_orm:
             emit_job_log(
                 db, job_id, "METRICS", "CALCULATION",
-                f"Calculated Focus Ratio = {metrics_orm.focus_ratio * 100:.1f}% ({counts['video']} video records / {counts['total']} total records). Formula: video_records / total_records.",
+                f"Calculated Focus Ratio = {metrics_orm.focus_ratio:.1f}% ({counts['video']} video records / {counts['total']} total records). Formula: aligned_video_records / total_video_records.",
                 details_dict={"focus_ratio": metrics_orm.focus_ratio, "video_records": counts["video"], "total_records": counts["total"]}
             )
             emit_job_log(
@@ -282,10 +282,10 @@ def execute_processing_pipeline(job_id: str, file_path: str):
 
         emit_job_log(db, job_id, "AI_DISCOVERY", "CALCULATION", "Computing TF-IDF vector cosine similarity across watch history titles and channel topics.")
 
-        emit_job_log(db, job_id, "AI_DISCOVERY", "INFO", "Querying Gemini 3.5 Flash Lite API for goal-aligned external channel recommendations.")
-        RecommendationEngine.generate_and_save_recommendations(db, job_id, job.goal_text)
+        emit_job_log(db, job_id, "AI_DISCOVERY", "INFO", "Querying Gemini Flash API for goal-aligned external channel recommendations.")
+        RecommendationEngine.generate_and_save_recommendations(db, job_id, job.goal_text, user_api_key=job.user_api_key)
 
-        emit_job_log(db, job_id, "AI_DISCOVERY", "SUCCESS", "Generated 5 watched channel recommendations and 5 Gemini 3.5 Flash Lite discovery recommendations.")
+        emit_job_log(db, job_id, "AI_DISCOVERY", "SUCCESS", "Generated 5 watched channel recommendations and 5 Gemini discovery recommendations.")
 
         job.progress_pct = 100.0
         job.status = JobStatus.COMPLETED

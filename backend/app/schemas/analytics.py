@@ -45,6 +45,7 @@ class BehavioralNudgeDTO(BaseModel):
 
 class AnalyticsResultDTO(BaseModel):
     job_id: str
+    goal_text: Optional[str] = None
     metrics: Optional[ComputedMetricDTO] = None
     alignment_score: Optional[GoalAlignmentScoreDTO] = None
     recommendations: List[RecommendedChannelDTO] = []

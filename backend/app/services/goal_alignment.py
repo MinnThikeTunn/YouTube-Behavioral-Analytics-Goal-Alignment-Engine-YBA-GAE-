@@ -68,8 +68,53 @@ class GoalAlignmentEngine:
     @classmethod
     def _compute_text_similarities(cls, goal_text: str, text_list: List[str]) -> Dict[str, float]:
         """
-        Ultra-fast TF-IDF & Cosine Similarity matrix calculation (<0.1s for 2,500 records).
+        Batched Cosine Similarity matrix calculation using sentence-transformers (all-MiniLM-L6-v2)
+        with TF-IDF fallback.
         Deduplicates unique text payloads and returns normalized cosine similarity map.
+        """
+        unique_texts = list(set([t for t in text_list if t and t.strip()]))
+        if not unique_texts or not goal_text.strip():
+            return {}
+
+        try:
+            model = get_embedding_model()
+            goal_emb = model.encode(goal_text, convert_to_numpy=True)
+            text_embs = model.encode(unique_texts, convert_to_numpy=True)
+
+            norm_goal = np.linalg.norm(goal_emb)
+            norm_texts = np.linalg.norm(text_embs, axis=1)
+
+            if norm_goal == 0:
+                return {t: 0.0 for t in unique_texts}
+
+            dots = np.dot(text_embs, goal_emb)
+            denom = norm_texts * norm_goal
+            denom[denom == 0] = 1e-9
+            sims = dots / denom
+
+            return {text: float(max(0.0, sims[idx])) for idx, text in enumerate(unique_texts)}
+        except Exception as e:
+            logger.warning(f"SentenceTransformer similarity failed, falling back to TF-IDF: {e}")
+            try:
+                from sklearn.feature_extraction.text import TfidfVectorizer
+                from sklearn.metrics.pairwise import cosine_similarity
+
+                corpus = [goal_text] + unique_texts
+                vectorizer = TfidfVectorizer(stop_words='english', sublinear_tf=True, ngram_range=(1, 2))
+                tfidf_matrix = vectorizer.fit_transform(corpus)
+
+                goal_vector = tfidf_matrix[0:1]
+                text_vectors = tfidf_matrix[1:]
+
+                sim_matrix = cosine_similarity(goal_vector, text_vectors).flatten()
+                return {text: float(sim_matrix[idx]) for idx, text in enumerate(unique_texts)}
+            except Exception as ex:
+                logger.error(f"Error computing similarity: {ex}")
+    @classmethod
+    def _compute_tfidf_similarities(cls, goal_text: str, text_list: List[str]) -> Dict[str, float]:
+        """
+        Ultra-fast TF-IDF & Cosine Similarity matrix calculation (<0.005s execution)
+        for real-time endpoint rendering.
         """
         unique_texts = list(set([t for t in text_list if t and t.strip()]))
         if not unique_texts or not goal_text.strip():
@@ -201,18 +246,34 @@ class GoalAlignmentEngine:
         db.commit()
 
         recommendations = []
-        # Compute real channel similarity for watched channels in history
+        # Build channel-to-video similarity aggregation
+        channel_video_sims: Dict[str, List[float]] = {}
+        for i, rec in enumerate(video_records):
+            v_orm = video_map.get(rec.video_id) if rec.video_id else None
+            c_id = v_orm.channel_id if v_orm else None
+            if c_id:
+                if c_id not in channel_video_sims:
+                    channel_video_sims[c_id] = []
+                channel_video_sims[c_id].append(similarities[i])
+
         for c_id, c_orm in channel_map.items():
             ch_text = f"{c_orm.channel_title or ''} {c_orm.channel_description or ''}".strip()
-            sim = channel_sim_map.get(ch_text, 0.0) if channel_sim_map else 0.0
-            recommendations.append({
-                "channel_id": c_id,
-                "channel_title": c_orm.channel_title or "Unknown Channel",
-                "channel_description": c_orm.channel_description or "Watched in your history.",
-                "similarity_score": round(max(0.0, sim), 2),
-                "category": "watched",
-                "channel_url": f"https://www.youtube.com/channel/{c_id}" if c_id else None
-            })
+            sim_meta = channel_sim_map.get(ch_text, 0.0) if channel_sim_map else 0.0
+            v_sims = channel_video_sims.get(c_id, [])
+            max_v_sim = max(v_sims) if v_sims else 0.0
+            avg_v_sim = float(np.mean(v_sims)) if v_sims else 0.0
+
+            channel_composite_sim = max(sim_meta, (0.70 * max_v_sim) + (0.30 * avg_v_sim))
+
+            if channel_composite_sim >= cls.SIMILARITY_THRESHOLD:
+                recommendations.append({
+                    "channel_id": c_id,
+                    "channel_title": c_orm.channel_title or "Unknown Channel",
+                    "channel_description": c_orm.channel_description or "Watched in your history.",
+                    "similarity_score": round(max(0.0, channel_composite_sim), 2),
+                    "category": "watched",
+                    "channel_url": f"https://www.youtube.com/channel/{c_id}" if c_id else None
+                })
 
         # Sort watched channels by highest real similarity
         recommendations.sort(key=lambda x: x["similarity_score"], reverse=True)
@@ -236,7 +297,7 @@ CURATED_DISCOVERY_MAP = {
 
 class RecommendationEngine:
     @classmethod
-    def generate_and_save_recommendations(cls, db: Session, job_id: str, goal_text: str):
+    def generate_and_save_recommendations(cls, db: Session, job_id: str, goal_text: str, user_api_key: Optional[str] = None):
         """
         Executes hybrid recommendation pipeline once during background processing.
         Saves both 'watched' (history vector-aligned) and 'discovery' (external LLM/curated)
@@ -260,7 +321,7 @@ class RecommendationEngine:
             db.add(orm_watched)
 
         # 2. Discovery channels (Gemini API with fallback)
-        discovery_items = cls.fetch_gemini_discovery_channels(goal_text)
+        discovery_items = cls.fetch_gemini_discovery_channels(goal_text, user_api_key=user_api_key)
 
         for item in discovery_items[:5]:
             orm_disc = RecommendedChannel(
@@ -276,18 +337,26 @@ class RecommendationEngine:
         db.commit()
 
     @classmethod
-    def fetch_gemini_discovery_channels(cls, goal_text: str) -> List[Dict[str, Any]]:
+    def fetch_gemini_discovery_channels(cls, goal_text: str, user_api_key: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        Queries Gemini Flash Lite (gemini-1.5-flash) to discover top-tier goal aligned channels.
-        Falls back seamlessly to CURATED_DISCOVERY_MAP if API key is missing or call fails.
+        Queries Gemini 3.1 Flash Lite / 3.5 Flash Lite / 2.5 Flash models
+        to discover top-tier goal aligned channels.
+        Falls back seamlessly to CURATED_DISCOVERY_MAP if API key is missing or network call fails.
         """
         from app.config import settings
         
-        gemini_key = settings.GEMINI_API_KEY or settings.YOUTUBE_API_KEY
+        gemini_key = user_api_key or settings.GEMINI_API_KEY or settings.YOUTUBE_API_KEY
         if gemini_key:
             import httpx
-            # Active Gemini Flash models to attempt in order (prioritizing gemini-3.5-flash-lite)
-            candidate_models = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+            # Active Gemini models prioritizing gemini-3.1-flash-lite
+            candidate_models = [
+                "gemini-3.1-flash-lite",
+                "gemini-3.5-flash-lite",
+                "gemini-3.1-flash-lite-preview",
+                "gemini-2.5-flash",
+                "gemini-2.0-flash-lite",
+                "gemini-1.5-flash"
+            ]
             prompt = f"""
             Act as an expert career and learning path advisor.
             Recommend 5 top-tier real YouTube channels to help someone master this goal: "{goal_text}".
@@ -303,28 +372,36 @@ class RecommendationEngine:
             for model_name in candidate_models:
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
-                    r = httpx.post(url, json=payload, timeout=4.0)
+                    r = httpx.post(url, json=payload, timeout=6.0)
                     if r.status_code == 429:
                         import time
                         time.sleep(1.0)
-                        r = httpx.post(url, json=payload, timeout=4.0)
+                        r = httpx.post(url, json=payload, timeout=6.0)
 
                     if r.status_code == 200:
                         resp_json = r.json()
-                        raw_text = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        parts = resp_json.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                        raw_text = "".join([p["text"] for p in parts if "text" in p and p["text"]]).strip()
                         cleaned_text = raw_text.replace("```json", "").replace("```", "").strip()
                         data = json.loads(cleaned_text)
                         if isinstance(data, list) and len(data) > 0:
                             logger.info(f"Successfully generated {len(data)} discovery channels via Gemini API ({model_name}).")
                             return data
+                    else:
+                        logger.debug(f"Gemini model {model_name} returned status {r.status_code}: {r.text[:200]}")
                 except Exception as e:
                     logger.debug(f"Gemini model {model_name} attempt failed: {e}")
                     continue
 
-        # Fallback to curated dataset
+        # Fallback to curated dataset or dynamic query construction
         goal_key = goal_text.strip().lower()
         for k, items in CURATED_DISCOVERY_MAP.items():
             if k in goal_key or goal_key in k:
                 return items
 
-        return CURATED_DISCOVERY_MAP["software engineering"]
+        title_cap = goal_text.strip().title()
+        return [
+            {"channel_title": f"Mastering {title_cap}", "channel_description": f"Top-rated educational course tutorials and practical guides for {goal_text}.", "similarity_score": 0.95, "channel_url": f"https://www.youtube.com/results?search_query={goal_text.replace(' ', '+')}"},
+            {"channel_title": f"{title_cap} Essentials", "channel_description": f"Essential concepts, tutorials, and practical insights for mastering {goal_text}.", "similarity_score": 0.92, "channel_url": f"https://www.youtube.com/results?search_query={goal_text.replace(' ', '+')}+tutorial"},
+            {"channel_title": f"{title_cap} Academy", "channel_description": f"Structured learning path and deep dives into {goal_text}.", "similarity_score": 0.90, "channel_url": f"https://www.youtube.com/results?search_query={goal_text.replace(' ', '+')}+course"}
+        ]

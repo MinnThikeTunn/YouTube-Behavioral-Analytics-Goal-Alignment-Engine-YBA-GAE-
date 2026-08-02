@@ -99,7 +99,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         />
       </div>
 
-      <CircadianChart circadianScore={circadianScore} />
+      <CircadianChart hourlyData={analytics.hourly_heatmap} circadianScore={circadianScore} />
 
       <ChannelRecommendations
         recommendations={analytics.recommendations}

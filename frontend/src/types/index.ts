@@ -79,6 +79,7 @@ export interface BehavioralNudgeDTO {
 
 export interface AnalyticsResultDTO {
   job_id: string;
+  goal_text?: string;
   metrics?: ComputedMetricDTO;
   alignment_score?: GoalAlignmentScoreDTO;
   recommendations: RecommendedChannelDTO[];
