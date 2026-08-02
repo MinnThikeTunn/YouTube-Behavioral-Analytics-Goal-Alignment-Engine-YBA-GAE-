@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.db.models import Job
-from app.schemas.job import JobStatusResponseDTO
+from app.schemas.job import JobStatusResponseDTO, JobLogDTO
 
 router = APIRouter()
 
@@ -25,5 +25,6 @@ def get_job_status(job_id: str, db: Session = Depends(get_db)):
         ad_records=job.ad_records,
         non_viewing_records=job.non_viewing_records,
         error_message=job.error_message,
-        completed_at=job.completed_at
+        completed_at=job.completed_at,
+        logs=[JobLogDTO.model_validate(log) for log in job.logs]
     )

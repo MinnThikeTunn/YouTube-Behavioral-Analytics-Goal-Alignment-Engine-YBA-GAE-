@@ -38,6 +38,8 @@ class Job(Base):
     raw_records = relationship("RawRecord", back_populates="job", cascade="all, delete-orphan")
     computed_metrics = relationship("ComputedMetric", back_populates="job", uselist=False, cascade="all, delete-orphan")
     alignment_score = relationship("GoalAlignmentScore", back_populates="job", uselist=False, cascade="all, delete-orphan")
+    recommended_channels = relationship("RecommendedChannel", back_populates="job", cascade="all, delete-orphan")
+    logs = relationship("JobLog", back_populates="job", cascade="all, delete-orphan", order_by="JobLog.timestamp.asc()")
 
 class RawRecord(Base):
     __tablename__ = "raw_records"
@@ -105,3 +107,32 @@ class GoalAlignmentScore(Base):
     calculated_at = Column(DateTime, default=datetime.utcnow)
 
     job = relationship("Job", back_populates="alignment_score")
+
+class RecommendedChannel(Base):
+    __tablename__ = "recommended_channels"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    job_id = Column(String, ForeignKey("jobs.id"), nullable=False, index=True)
+    channel_id = Column(String, nullable=True)
+    channel_title = Column(Text, nullable=False)
+    channel_description = Column(Text, nullable=True)
+    similarity_score = Column(Float, default=0.0)
+    category = Column(String, default="watched") # "watched" or "discovery"
+    channel_url = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    job = relationship("Job", back_populates="recommended_channels")
+
+class JobLog(Base):
+    __tablename__ = "job_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    job_id = Column(String, ForeignKey("jobs.id"), nullable=False, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    stage = Column(String, nullable=False)  # "INGESTION", "ENRICHMENT", "METRICS", "AI_DISCOVERY"
+    level = Column(String, default="INFO")   # "INFO", "CALCULATION", "SUCCESS", "WARNING", "ERROR"
+    message = Column(Text, nullable=False)
+    details_json = Column(Text, nullable=True)
+
+    job = relationship("Job", back_populates="logs")
+

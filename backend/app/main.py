@@ -7,9 +7,17 @@ from app.api.router import api_router
 # Create database tables on startup
 Base.metadata.create_all(bind=engine)
 
+from contextlib import asynccontextmanager
+from app.services.goal_alignment import get_embedding_model
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan
 )
 
 # Configure CORS
