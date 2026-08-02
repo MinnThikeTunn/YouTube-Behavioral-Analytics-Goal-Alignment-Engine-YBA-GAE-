@@ -23,12 +23,18 @@ export const TimeOfDayHeatmap: React.FC<TimeOfDayHeatmapProps> = ({ hourlyData =
   }
 
   // Find peak focus hour
-  const peakHourObj = [...hourlyData].sort((a, b) => b.avg_similarity - a.avg_similarity)[0];
+  const sortedData = [...hourlyData].sort((a, b) => b.avg_similarity - a.avg_similarity);
+  const peakHourObj = sortedData[0];
 
-  const getBarColor = (similarity: number) => {
-    if (similarity >= 60) return '#10B981'; // High focus (emerald)
-    if (similarity >= 35) return '#3B82F6'; // Medium focus (blue)
-    if (similarity >= 15) return '#F59E0B'; // Low focus (amber)
+  // Dynamic Y-axis upper limit to ensure trends are prominently visible
+  const maxSimilarity = Math.max(...hourlyData.map((d) => d.avg_similarity), 10);
+  const yAxisMax = Math.min(100, Math.max(30, Math.ceil(maxSimilarity * 1.25)));
+
+  const getBarColor = (similarity: number, clickCount: number) => {
+    if (clickCount === 0) return '#334155'; // Inactive hour
+    if (similarity >= 50) return '#10B981'; // High focus (emerald)
+    if (similarity >= 25) return '#3B82F6'; // Medium focus (blue)
+    if (similarity >= 10) return '#F59E0B'; // Low focus (amber)
     return '#64748B'; // Baseline / Noise (slate)
   };
 
@@ -69,7 +75,7 @@ export const TimeOfDayHeatmap: React.FC<TimeOfDayHeatmapProps> = ({ hourlyData =
                 fontSize={10}
                 tickLine={false}
                 axisLine={false}
-                domain={[0, 100]}
+                domain={[0, yAxisMax]}
                 unit="%"
               />
               <Tooltip
@@ -88,7 +94,10 @@ export const TimeOfDayHeatmap: React.FC<TimeOfDayHeatmapProps> = ({ hourlyData =
               />
               <Bar dataKey="avg_similarity" radius={[6, 6, 0, 0]}>
                 {hourlyData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getBarColor(entry.avg_similarity)} />
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={getBarColor(entry.avg_similarity, entry.click_count)}
+                  />
                 ))}
               </Bar>
             </BarChart>
@@ -98,19 +107,19 @@ export const TimeOfDayHeatmap: React.FC<TimeOfDayHeatmapProps> = ({ hourlyData =
         <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-slate-100 dark:border-zinc-800/80 text-[11px] text-slate-500 dark:text-zinc-400">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            <span>High Alignment (&ge;60%)</span>
+            <span>High Alignment (&ge;50%)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-            <span>Moderate (35-59%)</span>
+            <span>Moderate (25-49%)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-            <span>Low (15-34%)</span>
+            <span>Low (10-24%)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-slate-500" />
-            <span>Unaligned (&lt;15%)</span>
+            <span>Unaligned (&lt;10%)</span>
           </div>
         </div>
       </div>
