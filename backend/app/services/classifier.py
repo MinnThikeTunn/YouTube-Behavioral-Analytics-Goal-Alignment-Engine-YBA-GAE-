@@ -13,6 +13,25 @@ class EntryClassifier:
             return match.group(1)
         return None
 
+    @staticmethod
+    def extract_channel_info(subtitles: Optional[List[Dict[str, Any]]]) -> Tuple[Optional[str], Optional[str]]:
+        """Extracts channel_id and channel_title directly from Takeout subtitles array."""
+        if not subtitles or not isinstance(subtitles, list) or len(subtitles) == 0:
+            return None, None
+        sub = subtitles[0]
+        if not isinstance(sub, dict):
+            return None, None
+        name = sub.get("name")
+        url = sub.get("url", "")
+        cid = None
+        if url:
+            match = re.search(r"/(?:channel|c|user|@)/([a-zA-Z0-9_-]+)", url)
+            if match:
+                cid = match.group(1)
+            elif "channel/" in url:
+                cid = url.split("channel/")[-1].split("/")[0]
+        return cid, name
+
     @classmethod
     def classify_record(cls, raw: Dict[str, Any]) -> RecordType:
         title = raw.get("title", "")
@@ -64,7 +83,9 @@ class EntryClassifier:
             rec_type = cls.classify_record(raw)
             raw_title = raw.get("title", "")
             title_url = raw.get("titleUrl")
+            subtitles = raw.get("subtitles")
             video_id = cls.extract_video_id(title_url) if rec_type == RecordType.VIDEO else None
+            channel_id, channel_title = cls.extract_channel_info(subtitles)
 
             # Parse ISO timestamp
             time_str = raw.get("time", "")
@@ -78,6 +99,8 @@ class EntryClassifier:
                 "raw_title": raw_title,
                 "title_url": title_url,
                 "video_id": video_id,
+                "channel_id": channel_id,
+                "channel_title": channel_title,
                 "record_type": rec_type
             })
 
@@ -94,3 +117,81 @@ class EntryClassifier:
         classified_list.sort(key=lambda x: x["timestamp"])
 
         return classified_list, counts
+
+
+CANONICAL_CATEGORIES = {
+    "Gaming": {"color": "#6366F1", "keywords": ["game", "gaming", "gameplay", "walkthrough", "stream", "playstation", "xbox", "nintendo", "minecraft", "roblox", "gta", "valheim", "steam"]},
+    "Entertainment": {"color": "#EC4899", "keywords": ["movie", "trailer", "show", "entertainment", "comedy", "funny", "reaction", "vlog", "prank", "drama", "anime", "series"]},
+    "Sports": {"color": "#10B981", "keywords": ["sport", "sports", "football", "soccer", "basketball", "nba", "highlights", "boxing", "ufc", "wwe", "tennis", "formula 1", "f1"]},
+    "Software & Technology": {"color": "#3B82F6", "keywords": ["code", "coding", "python", "javascript", "react", "fastapi", "software", "tech", "engineering", "developer", "ai", "machine learning", "programming", "api", "database", "linux", "system design"]},
+    "Music": {"color": "#8B5CF6", "keywords": ["music", "song", "audio", "lyric", "lyrics", "official video", "album", "remix", "track", "concert", "beat", "piano", "guitar"]},
+    "News": {"color": "#F59E0B", "keywords": ["news", "politics", "live", "report", "breaking", "update", "today", "journalism", "interview", "podcast", "world"]},
+    "Education / Tutorials": {"color": "#14B8A6", "keywords": ["tutorial", "how to", "course", "lecture", "explained", "learn", "guide", "math", "science", "history", "physics", "crash course"]},
+    "Other": {"color": "#94A3B8", "keywords": []}
+}
+
+YOUTUBE_CATEGORY_ID_MAP = {
+    "20": "Gaming",
+    "24": "Entertainment",
+    "17": "Sports",
+    "28": "Software & Technology",
+    "27": "Education / Tutorials",
+    "10": "Music",
+    "25": "News",
+    "26": "Education / Tutorials",
+    "22": "Entertainment",
+    "1": "Entertainment",
+    "2": "Sports",
+    "15": "Entertainment"
+}
+
+class TopicClassifier:
+    @classmethod
+    def classify_topic(
+        cls,
+        category_id: Optional[str] = None,
+        topic_categories_json: Optional[str] = None,
+        raw_title: str = ""
+    ) -> str:
+        # 1. YouTube Category ID Lookup
+        if category_id and str(category_id) in YOUTUBE_CATEGORY_ID_MAP:
+            return YOUTUBE_CATEGORY_ID_MAP[str(category_id)]
+
+        # 2. Topic Categories Wikipedia URL inspection
+        if topic_categories_json:
+            try:
+                import json
+                topics = json.loads(topic_categories_json) if isinstance(topic_categories_json, str) else topic_categories_json
+                if isinstance(topics, list):
+                    topic_str = " ".join(topics).lower()
+                    if "gaming" in topic_str or "action_game" in topic_str:
+                        return "Gaming"
+                    if "sport" in topic_str:
+                        return "Sports"
+                    if "music" in topic_str:
+                        return "Music"
+                    if "news" in topic_str or "politics" in topic_str:
+                        return "News"
+                    if "software" in topic_str or "technology" in topic_str or "computer" in topic_str:
+                        return "Software & Technology"
+                    if "knowledge" in topic_str or "education" in topic_str:
+                        return "Education / Tutorials"
+                    if "entertainment" in topic_str or "society" in topic_str or "film" in topic_str:
+                        return "Entertainment"
+            except Exception:
+                pass
+
+        # 3. Keyword / Title Matching Fallback
+        t_clean = raw_title.lower()
+        if t_clean.startswith("watched "):
+            t_clean = t_clean[8:]
+
+        for cat_name, cat_meta in CANONICAL_CATEGORIES.items():
+            if cat_name == "Other":
+                continue
+            for kw in cat_meta["keywords"]:
+                if kw in t_clean:
+                    return cat_name
+
+        return "Other"
+

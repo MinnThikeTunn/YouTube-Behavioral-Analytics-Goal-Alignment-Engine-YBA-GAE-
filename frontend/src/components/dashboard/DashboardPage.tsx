@@ -4,6 +4,9 @@ import { GoalScoreCard } from './GoalScoreCard';
 import { MetricCard } from './MetricCard';
 import { CircadianChart } from './CircadianChart';
 import { ChannelRecommendations } from './ChannelRecommendations';
+import { TopicBreakdownChart } from './TopicBreakdownChart';
+import { TimeOfDayHeatmap } from './TimeOfDayHeatmap';
+import { BehavioralNudges } from './BehavioralNudges';
 import { Target, Eye, Gauge, Moon, RefreshCw } from 'lucide-react';
 
 interface DashboardPageProps {
@@ -53,6 +56,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         goalText={goalText}
       />
 
+      <BehavioralNudges nudges={analytics.nudges} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TimeOfDayHeatmap hourlyData={analytics.hourly_heatmap} />
+        <TopicBreakdownChart categories={analytics.categories} />
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Focus Ratio"
@@ -98,3 +108,4 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     </div>
   );
 };
+

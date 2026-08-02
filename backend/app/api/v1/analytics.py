@@ -1,14 +1,152 @@
-import json
+import math
 import logging
+from typing import Dict, List, Optional
+import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.db.models import Job, ComputedMetric, GoalAlignmentScore, EnrichedChannel
-from app.schemas.analytics import AnalyticsResultDTO, ComputedMetricDTO, GoalAlignmentScoreDTO, RecommendedChannelDTO
+from app.db.models import Job, RawRecord, RecordType, EnrichedVideo
+from app.services.classifier import TopicClassifier, CANONICAL_CATEGORIES
+from app.services.goal_alignment import GoalAlignmentEngine
+from app.schemas.analytics import (
+    AnalyticsResultDTO, ComputedMetricDTO, GoalAlignmentScoreDTO,
+    RecommendedChannelDTO, TopicCategoryBreakdownDTO, HourlyAlignmentDTO, BehavioralNudgeDTO
+)
 
 logger = logging.getLogger(__name__)
 
+
 router = APIRouter()
+
+def build_topic_breakdown(db: Session, job_id: str) -> List[TopicCategoryBreakdownDTO]:
+    records = db.query(RawRecord).filter(
+        RawRecord.job_id == job_id,
+        RawRecord.record_type == RecordType.VIDEO
+    ).all()
+    if not records:
+        return []
+
+    video_ids = [r.video_id for r in records if r.video_id]
+    enriched = db.query(EnrichedVideo).filter(EnrichedVideo.video_id.in_(video_ids)).all() if video_ids else []
+    video_map = {v.video_id: v for v in enriched}
+
+    counts: Dict[str, int] = {cat: 0 for cat in CANONICAL_CATEGORIES.keys()}
+    total = len(records)
+
+    for rec in records:
+        ev = video_map.get(rec.video_id) if rec.video_id else None
+        cat_id = ev.category_id if ev else None
+        topics_json = ev.topic_categories_json if ev else None
+        topic = TopicClassifier.classify_topic(cat_id, topics_json, rec.raw_title or "")
+        counts[topic] = counts.get(topic, 0) + 1
+
+    result = []
+    for cat_name, count in counts.items():
+        if count > 0:
+            pct = round((count / float(total)) * 100.0, 1)
+            color = CANONICAL_CATEGORIES.get(cat_name, {}).get("color", "#94A3B8")
+            result.append(TopicCategoryBreakdownDTO(
+                category_name=cat_name,
+                count=count,
+                percentage=pct,
+                color=color
+            ))
+
+    result.sort(key=lambda x: x.count, reverse=True)
+    return result
+
+def build_hourly_heatmap(db: Session, job_id: str, goal_text: str) -> List[HourlyAlignmentDTO]:
+    records = db.query(RawRecord).filter(
+        RawRecord.job_id == job_id,
+        RawRecord.record_type == RecordType.VIDEO
+    ).all()
+    
+    hourly_records: Dict[int, List[str]] = {h: [] for h in range(24)}
+    for rec in records:
+        h = rec.timestamp.hour
+        title_clean = GoalAlignmentEngine.clean_title(rec.raw_title or "")
+        if title_clean:
+            hourly_records[h].append(title_clean)
+
+    result = []
+    for h in range(24):
+        titles = hourly_records[h]
+        click_cnt = len(titles)
+        if click_cnt > 0 and goal_text and goal_text.strip():
+            sim_map = GoalAlignmentEngine._compute_text_similarities(goal_text, titles)
+            sims = [sim_map.get(t, 0.0) for t in titles]
+            avg_sim = round(float(np.mean(sims)) * 100.0, 1) if sims else 0.0
+        else:
+            avg_sim = 0.0
+
+        if h == 0:
+            fmt = "12 AM"
+        elif h < 12:
+            fmt = f"{h} AM"
+        elif h == 12:
+            fmt = "12 PM"
+        else:
+            fmt = f"{h - 12} PM"
+
+        result.append(HourlyAlignmentDTO(
+            hour=h,
+            formatted_hour=fmt,
+            avg_similarity=avg_sim,
+            click_count=click_cnt
+        ))
+
+    return result
+
+def build_behavioral_nudges(db: Session, job_id: str, metrics: Optional[ComputedMetricDTO], goal_text: str) -> List[BehavioralNudgeDTO]:
+    nudges: List[BehavioralNudgeDTO] = []
+    if not metrics:
+        return nudges
+
+    total_videos = db.query(RawRecord).filter(
+        RawRecord.job_id == job_id,
+        RawRecord.record_type == RecordType.VIDEO
+    ).count()
+
+    if total_videos == 0:
+        return nudges
+
+    # 1. Switching Threshold Alert
+    if metrics.session_density > 15.0:
+        nudges.append(BehavioralNudgeDTO(
+            nudge_type="switching_alert",
+            severity="warning",
+            title="Rapid Video Switching Alert",
+            message=f"High Session Density detected ({metrics.session_density:.1f} clicks/hr). You've clicked videos in rapid succession. Consider taking a 5-minute break or queueing a long-form tutorial.",
+            swap_count=None
+        ))
+
+    # 2. Focus Goal Goalpost
+    current_fr = metrics.focus_ratio
+    target_fr = 25.0 if current_fr < 25.0 else min(100.0, current_fr + 15.0)
+    current_goal_clicks = math.floor(total_videos * (current_fr / 100.0))
+    required_goal_clicks = math.ceil(total_videos * (target_fr / 100.0))
+    swaps_needed = max(1, required_goal_clicks - current_goal_clicks)
+
+    goal_display = goal_text if goal_text else "target goal"
+    nudges.append(BehavioralNudgeDTO(
+        nudge_type="focus_goalpost",
+        severity="action",
+        title="Focus Ratio Goalpost",
+        message=f"Elevate your Focus Ratio from {current_fr:.1f}% to {target_fr:.1f}% by swapping {swaps_needed} entertainment click(s) with '{goal_display}' tutorials.",
+        swap_count=swaps_needed
+    ))
+
+    # 3. Circadian Score Warning
+    if metrics.circadian_score > 15.0:
+        nudges.append(BehavioralNudgeDTO(
+            nudge_type="circadian_alert",
+            severity="info",
+            title="Late-Night Focus Nudge",
+            message=f"{metrics.circadian_score:.1f}% of your total viewing occurs late-night (11:00 PM – 5:00 AM). Late-night sessions reduce retention for complex topics.",
+            swap_count=None
+        ))
+
+    return nudges
 
 @router.get("/analytics/{job_id}", response_model=AnalyticsResultDTO)
 def get_analytics_results(job_id: str, db: Session = Depends(get_db)):
@@ -43,21 +181,30 @@ def get_analytics_results(job_id: str, db: Session = Depends(get_db)):
             circadian_penalty=job.alignment_score.circadian_penalty
         )
 
-    # Fetch top enriched channels dynamically if YouTube API key was used
-    channels = db.query(EnrichedChannel).limit(5).all()
     recommendations_dto = [
         RecommendedChannelDTO(
-            channel_id=ch.channel_id,
-            channel_title=ch.channel_title or "Educational Channel",
-            channel_description=ch.channel_description or "Recommended channel aligned with your target goal.",
-            similarity_score=0.85
+            channel_id=rec.channel_id,
+            channel_title=rec.channel_title,
+            channel_description=rec.channel_description,
+            similarity_score=rec.similarity_score,
+            category=rec.category or "watched",
+            channel_url=rec.channel_url
         )
-        for ch in channels
+        for rec in job.recommended_channels
     ]
+
+    goal_text = job.goal_text or ""
+    categories_dto = build_topic_breakdown(db, job.id)
+    hourly_heatmap_dto = build_hourly_heatmap(db, job.id, goal_text)
+    nudges_dto = build_behavioral_nudges(db, job.id, metrics_dto, goal_text)
 
     return AnalyticsResultDTO(
         job_id=job.id,
         metrics=metrics_dto,
         alignment_score=alignment_dto,
-        recommendations=recommendations_dto
+        recommendations=recommendations_dto,
+        categories=categories_dto,
+        hourly_heatmap=hourly_heatmap_dto,
+        nudges=nudges_dto
     )
+
