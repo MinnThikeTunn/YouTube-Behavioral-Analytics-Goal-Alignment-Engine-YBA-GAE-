@@ -85,6 +85,12 @@
       "skillPath": "skills/engineering/improve-codebase-architecture/SKILL.md",
       "computedHash": "569299a60c8e93880f3b3c1eca55578f58f7e1a4155876edb4cb814da3d6b3ea"
     },
+    "interactive-html-presentation": {
+      "source": "MinnThikeTunn/Interactive-Presentation-Skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "ca997b411b3a949de6ab78adbfe26f3efa99f99b1b67ae851f7ef12110536bf9"
+    },
     "mermaidjs-v11": {
       "source": "mrgoonie/claudekit-skills",
       "sourceType": "github",

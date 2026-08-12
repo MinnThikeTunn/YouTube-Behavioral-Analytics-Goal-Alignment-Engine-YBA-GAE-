@@ -4,7 +4,7 @@ import { FileUploader } from './components/upload/FileUploader';
 import { ProcessingStatus } from './components/upload/ProcessingStatus';
 import { DashboardPage } from './components/dashboard/DashboardPage';
 import { UploadResponseDTO, JobStatusResponseDTO, AnalyticsResultDTO } from './types';
-import { getAnalyticsResults } from './services/api';
+import { getAnalyticsResults, getVelocityAnalytics, getCohortAnalytics } from './services/api';
 import { Card } from './components/common/Card';
 import { Loader2 } from 'lucide-react';
 
@@ -13,6 +13,8 @@ export const App: React.FC = () => {
   const [activeJob, setActiveJob] = useState<UploadResponseDTO | null>(null);
   const [completedJob, setCompletedJob] = useState<JobStatusResponseDTO | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsResultDTO | null>(null);
+  const [velocityAnalytics, setVelocityAnalytics] = useState<any>(null);
+  const [cohortAnalytics, setCohortAnalytics] = useState<any>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState<boolean>(false);
 
   useEffect(() => {
@@ -27,8 +29,14 @@ export const App: React.FC = () => {
     setCompletedJob(status);
     setLoadingAnalytics(true);
     try {
-      const data = await getAnalyticsResults(status.job_id);
+      const [data, velocityData, cohortData] = await Promise.all([
+        getAnalyticsResults(status.job_id),
+        getVelocityAnalytics(status.job_id).catch(() => null),
+        getCohortAnalytics(status.job_id).catch(() => null)
+      ]);
       setAnalytics(data);
+      if (velocityData) setVelocityAnalytics(velocityData);
+      if (cohortData) setCohortAnalytics(cohortData);
     } catch (err) {
       console.error('Failed to fetch analytics results:', err);
     } finally {
@@ -40,6 +48,8 @@ export const App: React.FC = () => {
     setActiveJob(null);
     setCompletedJob(null);
     setAnalytics(null);
+    setVelocityAnalytics(null);
+    setCohortAnalytics(null);
   };
 
   return (
@@ -77,6 +87,8 @@ export const App: React.FC = () => {
         {!loadingAnalytics && completedJob && analytics && (
           <DashboardPage
             analytics={analytics}
+            velocityAnalytics={velocityAnalytics}
+            cohortAnalytics={cohortAnalytics}
             jobStatus={completedJob}
             goalText={analytics.goal_text || "Software Engineering"}
             onReset={handleReset}

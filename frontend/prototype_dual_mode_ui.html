@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YBA-GAE Prototype — Dual Mode & Chrome Extension Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              dark: '#0B0C10',
+              card: '#12141C',
+              border: '#1F2433',
+              accent: '#10B981',
+              creator: '#8B5CF6',
+              warning: '#F59E0B',
+              danger: '#EF4444'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #07080B; color: #F3F4F6; }
+    .glass-card {
+      background: rgba(18, 20, 28, 0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 32px;
+    }
+    .pulse-ring {
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+  </style>
+</head>
+<body class="font-sans antialiased min-h-screen pb-16">
+
+  <!-- TOP PROTOTYPE BAR -->
+  <div class="sticky top-0 z-50 bg-[#07080B]/90 backdrop-blur-xl border-b border-white/10 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center font-black text-xl text-black shadow-lg shadow-emerald-500/20">
+          Y
+        </div>
+        <div>
+          <h1 class="text-xl font-black tracking-tight text-white flex items-center gap-2">
+            YBA-GAE <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold uppercase tracking-wider">PROTOTYPE V1</span>
+          </h1>
+          <p class="text-xs text-zinc-400">Chrome Extension & Real-Time Dual Dashboard Architecture</p>
+        </div>
+      </div>
+
+      <!-- MODE SWITCHER TOGGLE -->
+      <div class="flex items-center bg-[#12141C] p-1.5 rounded-full border border-white/10 shadow-inner">
+        <button id="btn-viewer-mode" onclick="switchMode('viewer')" class="px-5 py-2 rounded-full text-xs font-bold transition-all duration-300 bg-emerald-500 text-black shadow-lg shadow-emerald-500/25">
+          👤 Viewer Mode (What to Watch)
+        </button>
+        <button id="btn-creator-mode" onclick="switchMode('creator')" class="px-5 py-2 rounded-full text-xs font-bold transition-all duration-300 text-zinc-400 hover:text-white">
+          🎥 Creator Mode (What to Create)
+        </button>
+      </div>
+
+      <!-- EXTENSION SIMULATION TOGGLE -->
+      <button onclick="toggleExtensionOverlay()" class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-xs font-semibold text-zinc-300 hover:bg-white/10 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+        <span id="ext-status-text">Show YouTube Extension Badge</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-6 py-8">
+
+    <!-- 🧩 YOUTUBE EXTENSION OVERLAY SIMULATOR (HIDDEN BY DEFAULT, TOGGLABLE) -->
+    <div id="youtube-overlay-simulator" class="hidden mb-10 transition-all duration-500">
+      <div class="relative glass-card overflow-hidden border-2 border-emerald-500/40 p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-red-500 uppercase tracking-widest bg-red-500/10 px-2 py-1 rounded-lg border border-red-500/20">LIVE SIMULATION</span>
+            <span class="text-sm font-semibold text-zinc-300">YouTube Video Player Page (youtube.com/watch?v=...)</span>
+          </div>
+          <button onclick="toggleExtensionOverlay()" class="text-xs text-zinc-500 hover:text-white">✕ Close Simulation</button>
+        </div>
+
+        <!-- MOCK YOUTUBE PLAYER -->
+        <div class="relative aspect-video max-h-[420px] w-full rounded-2xl bg-zinc-950 flex flex-col justify-between p-6 border border-white/10 shadow-2xl overflow-hidden group">
+          <!-- Mock Video Background -->
+          <div class="absolute inset-0 bg-gradient-to-tr from-slate-900 via-indigo-950/40 to-slate-900 opacity-90"></div>
+
+          <!-- EXTENSION OVERLAY BADGE (TOP RIGHT) -->
+          <div class="relative z-10 self-end bg-[#0B0C10]/95 backdrop-blur-xl border border-emerald-500/40 p-3.5 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
+            <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center font-black text-emerald-400 text-sm">
+              88%
+            </div>
+            <div>
+              <div class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> YBA Goal Match
+              </div>
+              <div class="text-xs font-bold text-white">Agentic AI Coding Tutorials</div>
+            </div>
+            <button onclick="triggerFocusShield()" class="ml-2 text-[10px] px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/30">
+              Test Shield Nudge
+            </button>
+          </div>
+
+          <!-- MOCK PLAYER UI CONTENT -->
+          <div class="relative z-10">
+            <h2 class="text-2xl font-black text-white">Building Autonomous AI Coding Agents from Scratch in Python</h2>
+            <p class="text-xs text-zinc-400 mt-1">TechLead AI • 142K views • 2 hours ago</p>
+          </div>
+
+          <!-- FOCUS SHIELD MODAL INJECTION DEMO (HIDDEN UNTIL CLICKED) -->
+          <div id="focus-shield-modal" class="hidden absolute inset-0 z-30 bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center text-center p-8 border-2 border-red-500/50 rounded-2xl">
+            <div class="w-16 h-16 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center text-red-400 text-3xl mb-4 animate-pulse">
+              🛡️
+            </div>
+            <h3 class="text-2xl font-black text-white">YBA Focus Shield Activated</h3>
+            <p class="text-sm text-zinc-300 max-w-md mt-2">
+              This video (<span class="text-red-400 font-semibold">12% Goal Match - Entertainment</span>) drops your session focus score below your target threshold (<span class="font-mono text-zinc-200">35%</span>).
+            </p>
+            <div class="flex items-center gap-4 mt-6">
+              <button onclick="dismissShield()" class="px-6 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-zinc-300">
+                Continue Watching Anyway
+              </button>
+              <button onclick="dismissShield()" class="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-bold text-black shadow-lg shadow-emerald-500/30">
+                Return to Goal Recommendations 🚀
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================================================================================= -->
+    <!-- 👤 VIEW 1: VIEWER MODE DASHBOARD (REAL-TIME CONSUMPTION INTEL) -->
+    <!-- ================================================================================= -->
+    <div id="view-viewer-mode" class="space-y-8">
+      
+      <!-- HERO METRIC BANNER -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="glass-card p-6">
+          <div class="text-xs uppercase tracking-wider font-semibold text-zinc-400 mb-1">Today's Alignment Score</div>
+          <div class="text-4xl font-black text-emerald-400 flex items-baseline gap-2">
+            84.2 <span class="text-xs font-medium text-emerald-500">+12% vs last week</span>
+          </div>
+          <div class="w-full bg-zinc-800 h-2 rounded-full mt-4 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full w-[84%] rounded-full"></div>
+          </div>
+        </div>
+
+        <div class="glass-card p-6">
+          <div class="text-xs uppercase tracking-wider font-semibold text-zinc-400 mb-1">Session Focus Ratio</div>
+          <div class="text-4xl font-black text-white">78.5%</div>
+          <p class="text-xs text-zinc-400 mt-2">Educational vs Passive Entertainment</p>
+        </div>
+
+        <div class="glass-card p-6">
+          <div class="text-xs uppercase tracking-wider font-semibold text-zinc-400 mb-1">Circadian Watch Window</div>
+          <div class="text-2xl font-black text-cyan-400">Peak Focus: 9 AM - 1 PM</div>
+          <p class="text-xs text-zinc-400 mt-2">Low cognitive decay window</p>
+        </div>
+
+        <div class="glass-card p-6">
+          <div class="text-xs uppercase tracking-wider font-semibold text-zinc-400 mb-1">Live Stream Status</div>
+          <div class="flex items-center gap-3 mt-1">
+            <div class="w-3 h-3 rounded-full bg-emerald-400 pulse-ring"></div>
+            <span class="text-lg font-bold text-white">Extension Connected</span>
+          </div>
+          <p class="text-xs text-zinc-400 mt-2">Listening via WebSocket (0ms latency)</p>
+        </div>
+      </div>
+
+      <!-- LIVE ACTIVITY FEED & FOCUS VELOCITY CHART -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- REAL-TIME WATCH FEED -->
+        <div class="glass-card p-8 lg:col-span-2 space-y-6">
+          <div class="flex items-center justify-between border-b border-white/10 pb-4">
+            <div>
+              <h2 class="text-xl font-black text-white">Real-Time Extension Watch Stream</h2>
+              <p class="text-xs text-zinc-400">Live heartbeats captured from Chrome Extension Agent</p>
+            </div>
+            <span class="text-xs font-mono px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">ws://live</span>
+          </div>
+
+          <div class="space-y-4">
+            <!-- Feed Item 1 (High Alignment) -->
+            <div class="p-4 rounded-2xl bg-zinc-900/80 border border-emerald-500/30 flex items-center justify-between hover:border-emerald-500/60 transition-all">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/40 flex items-center justify-center font-black text-emerald-400">
+                  94%
+                </div>
+                <div>
+                  <h4 class="text-sm font-bold text-white">FastAPI Microservices Architectural Deep Dive</h4>
+                  <p class="text-xs text-zinc-400">ArjanCodes • Watched 18m • 2 mins ago</p>
+                </div>
+              </div>
+              <span class="text-xs font-bold px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">HIGH FOCUS</span>
+            </div>
+
+            <!-- Feed Item 2 (Medium Alignment) -->
+            <div class="p-4 rounded-2xl bg-zinc-900/80 border border-white/10 flex items-center justify-between hover:border-white/20 transition-all">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/40 flex items-center justify-center font-black text-cyan-400">
+                  72%
+                </div>
+                <div>
+                  <h4 class="text-sm font-bold text-white">TypeScript 5.4 New Features Breakdown</h4>
+                  <p class="text-xs text-zinc-400">Fireship • Watched 6m • 32 mins ago</p>
+                </div>
+              </div>
+              <span class="text-xs font-bold px-3 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">GOAL MATCH</span>
+            </div>
+
+            <!-- Feed Item 3 (Low Alignment / Warning) -->
+            <div class="p-4 rounded-2xl bg-zinc-900/80 border border-red-500/30 flex items-center justify-between hover:border-red-500/60 transition-all">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/40 flex items-center justify-center font-black text-red-400">
+                  18%
+                </div>
+                <div>
+                  <h4 class="text-sm font-bold text-white">Top 10 Gaming Moments of the Decade</h4>
+                  <p class="text-xs text-zinc-400">IGN • Watched 4m • Intercepted by Shield</p>
+                </div>
+              </div>
+              <span class="text-xs font-bold px-3 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/30">RABBIT HOLE</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- COGNITIVE DECAY VELOCITY -->
+        <div class="glass-card p-8 space-y-6">
+          <h2 class="text-xl font-black text-white">Attention Velocity</h2>
+          <p class="text-xs text-zinc-400">Calculates fatigue transitions per watch session</p>
+
+          <div class="space-y-6">
+            <div class="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-2">
+              <div class="flex justify-between text-xs">
+                <span class="text-zinc-400">Current Session Velocity</span>
+                <span class="text-emerald-400 font-bold">Stable (+0.4)</span>
+              </div>
+              <div class="text-2xl font-black text-white">Low Fatigue</div>
+              <p class="text-[11px] text-zinc-400">Optimal learning state maintained across last 45 minutes.</p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-3">
+              <div class="text-xs font-bold text-zinc-300">Target Learning Tree (DAG)</div>
+              <div class="space-y-2 text-xs">
+                <div class="flex items-center justify-between p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+                  <span>Linear Algebra & Vector Math</span>
+                  <span class="font-bold">100%</span>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+                  <span>PyTorch & Transformers</span>
+                  <span class="font-bold">85%</span>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded-xl bg-zinc-800 text-zinc-400">
+                  <span>Agentic AI Orchestration</span>
+                  <span class="font-bold">40%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ================================================================================= -->
+    <!-- 🎥 VIEW 2: CREATOR MODE DASHBOARD (CREATOR DECISION ENGINE) -->
+    <!-- ================================================================================= -->
+    <div id="view-creator-mode" class="hidden space-y-8">
+      
+      <!-- CREATOR HEADER METRICS -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="glass-card p-6 border-violet-500/30">
+          <div class="text-xs uppercase tracking-wider font-semibold text-zinc-400 mb-1">Audience Alignment Match</div>
+          <div class="text-4xl font-black text-violet-400">89.4%</div>
+          <p class="text-xs text-zinc-400 mt-2">Content aligns with subscriber goals</p>
+        </div>
+
+        <div class="glass-card p-6 border-violet-500/30">
+          <div class="text-xs uppercase tracking-wider font-semibold text-zinc-400 mb-1">Detected Content Gaps</div>
+          <div class="text-4xl font-black text-amber-400">3 High Demand</div>
+          <p class="text-xs text-zinc-400 mt-2">Niche trends missing in catalog</p>
+        </div>
+
+        <div class="glass-card p-6 border-violet-500/30">
+          <div class="text-xs uppercase tracking-wider font-semibold text-zinc-400 mb-1">Top Niche Trend Radar</div>
+          <div class="text-2xl font-black text-emerald-400">Agentic AI: 96 🔥</div>
+          <p class="text-xs text-zinc-400 mt-2">High view growth & low saturation</p>
+        </div>
+
+        <div class="glass-card p-6 border-violet-500/30">
+          <div class="text-xs uppercase tracking-wider font-semibold text-zinc-400 mb-1">Pre-Publish Package Score</div>
+          <div class="text-4xl font-black text-emerald-400">91 / 100</div>
+          <p class="text-xs text-zinc-400 mt-2">High Viewer Attraction ($VAS$)</p>
+        </div>
+      </div>
+
+      <!-- CREATOR DECISION SUPPORT PIPELINE -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- 👥 AUDIENCE INTENT & DEMAND MAP -->
+        <div class="glass-card p-8 space-y-6">
+          <div class="flex items-center justify-between border-b border-white/10 pb-4">
+            <div>
+              <h2 class="text-xl font-black text-white">👥 Audience Goal & Intent Distribution</h2>
+              <p class="text-xs text-zinc-400">Inferred using zero-shot NLP on comments & viewing habits</p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div class="space-y-1">
+              <div class="flex justify-between text-xs font-semibold">
+                <span class="text-white">🤖 Building Autonomous Agentic AI Systems</span>
+                <span class="text-violet-400 font-bold">38%</span>
+              </div>
+              <div class="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
+                <div class="bg-gradient-to-r from-violet-500 to-indigo-500 h-full w-[38%] rounded-full"></div>
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              <div class="flex justify-between text-xs font-semibold">
+                <span class="text-white">⚡ FastAPI Production Performance & Async</span>
+                <span class="text-violet-400 font-bold">29%</span>
+              </div>
+              <div class="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
+                <div class="bg-gradient-to-r from-violet-500 to-indigo-500 h-full w-[29%] rounded-full"></div>
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              <div class="flex justify-between text-xs font-semibold">
+                <span class="text-white">🔍 Vector Embeddings & Sentence-Transformers</span>
+                <span class="text-violet-400 font-bold">19%</span>
+              </div>
+              <div class="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
+                <div class="bg-gradient-to-r from-violet-500 to-indigo-500 h-full w-[19%] rounded-full"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- REPEATED COMMENTS MINED -->
+          <div class="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-3">
+            <div class="text-xs font-bold text-zinc-300">💬 Extracted Viewer Requests (Comment Mining)</div>
+            <div class="space-y-2 text-xs text-zinc-300">
+              <div class="p-2 rounded-xl bg-zinc-800/80 flex justify-between">
+                <span>"Can you make a full video on multi-agent subagent orchestration?"</span>
+                <span class="text-violet-400 font-bold">114 requests</span>
+              </div>
+              <div class="p-2 rounded-xl bg-zinc-800/80 flex justify-between">
+                <span>"How do you handle SQLite locks in FastAPI background tasks?"</span>
+                <span class="text-violet-400 font-bold">78 requests</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 💡 SMART VIDEO OPPORTUNITY FINDER (VOS) -->
+        <div class="glass-card p-8 space-y-6">
+          <div class="flex items-center justify-between border-b border-white/10 pb-4">
+            <div>
+              <h2 class="text-xl font-black text-white">💡 Video Opportunity Finder (VOS)</h2>
+              <p class="text-xs text-zinc-400">Highest ROI video topics calculated for your channel</p>
+            </div>
+            <span class="text-xs font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">3 Content Gaps</span>
+          </div>
+
+          <div class="space-y-4">
+            <!-- Opportunity Item 1 -->
+            <div class="p-5 rounded-2xl bg-gradient-to-r from-violet-950/40 via-zinc-900 to-zinc-900 border border-violet-500/40 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-violet-400 uppercase tracking-wider">🥇 TOP RECOMMENDED OPPORTUNITY</span>
+                <span class="text-lg font-black text-emerald-400">VOS: 94 / 100 🔥</span>
+              </div>
+              <h3 class="text-base font-bold text-white">"Building Multi-Agent Systems in FastAPI from Scratch"</h3>
+              <div class="grid grid-cols-3 gap-2 text-[11px] text-zinc-400 border-t border-white/10 pt-3">
+                <div>Trend Score: <span class="text-white font-bold">96</span></div>
+                <div>Audience Match: <span class="text-white font-bold">94%</span></div>
+                <div>Competition: <span class="text-emerald-400 font-bold">Low</span></div>
+              </div>
+            </div>
+
+            <!-- Opportunity Item 2 -->
+            <div class="p-4 rounded-2xl bg-zinc-900/80 border border-white/10 space-y-2">
+              <div class="flex items-center justify-between">
+                <h4 class="text-sm font-bold text-white">"Chrome Extension Manifest V3 + WebSockets Guide"</h4>
+                <span class="text-sm font-black text-emerald-400">VOS: 88 / 100</span>
+              </div>
+              <p class="text-xs text-zinc-400">Fills content gap in browser extension development</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ✍️ PACKAGE OPTIMIZER (TITLE, THUMBNAIL, HOOK SCORE) -->
+      <div class="glass-card p-8 space-y-6">
+        <h2 class="text-xl font-black text-white">✍️ Pre-Publish Package Optimizer ($VAS$)</h2>
+        <p class="text-xs text-zinc-400">Analyze title, thumbnail vision readability, and hook script before publishing</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="p-4 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-2">
+            <div class="text-xs font-bold text-zinc-400 uppercase">Title Score</div>
+            <div class="text-2xl font-black text-emerald-400">91 / 100 🔥</div>
+            <p class="text-xs text-zinc-300">"Multi-Agent AI Systems in FastAPI: Step-by-Step Guide"</p>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-2">
+            <div class="text-xs font-bold text-zinc-400 uppercase">Thumbnail Vision Score</div>
+            <div class="text-2xl font-black text-cyan-400">86 / 100</div>
+            <p class="text-xs text-zinc-300">High contrast, clean text clutter ratio (78%)</p>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-2">
+            <div class="text-xs font-bold text-zinc-400 uppercase">Hook Script Retention</div>
+            <div class="text-2xl font-black text-emerald-400">89 / 100</div>
+            <p class="text-xs text-zinc-300">First 30 seconds delivers value proposition immediately.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    function switchMode(mode) {
+      const viewerBtn = document.getElementById('btn-viewer-mode');
+      const creatorBtn = document.getElementById('btn-creator-mode');
+      const viewViewer = document.getElementById('view-viewer-mode');
+      const viewCreator = document.getElementById('view-creator-mode');
+
+      if (mode === 'viewer') {
+        viewerBtn.className = "px-5 py-2 rounded-full text-xs font-bold transition-all duration-300 bg-emerald-500 text-black shadow-lg shadow-emerald-500/25";
+        creatorBtn.className = "px-5 py-2 rounded-full text-xs font-bold transition-all duration-300 text-zinc-400 hover:text-white";
+        viewViewer.classList.remove('hidden');
+        viewCreator.classList.add('hidden');
+      } else {
+        creatorBtn.className = "px-5 py-2 rounded-full text-xs font-bold transition-all duration-300 bg-violet-500 text-white shadow-lg shadow-violet-500/25";
+        viewerBtn.className = "px-5 py-2 rounded-full text-xs font-bold transition-all duration-300 text-zinc-400 hover:text-white";
+        viewCreator.classList.remove('hidden');
+        viewViewer.classList.add('hidden');
+      }
+    }
+
+    function toggleExtensionOverlay() {
+      const overlay = document.getElementById('youtube-overlay-simulator');
+      const statusText = document.getElementById('ext-status-text');
+      if (overlay.classList.contains('hidden')) {
+        overlay.classList.remove('hidden');
+        statusText.innerText = "Hide YouTube Extension Badge";
+      } else {
+        overlay.classList.add('hidden');
+        statusText.innerText = "Show YouTube Extension Badge";
+      }
+    }
+
+    function triggerFocusShield() {
+      document.getElementById('focus-shield-modal').classList.remove('hidden');
+    }
+
+    function dismissShield() {
+      document.getElementById('focus-shield-modal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>

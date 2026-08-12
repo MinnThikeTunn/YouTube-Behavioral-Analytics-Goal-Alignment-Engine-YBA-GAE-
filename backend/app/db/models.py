@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 from sqlalchemy import Column, String, Integer, Float, DateTime, Enum, ForeignKey, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from app.db.session import Base
 
 class JobStatus(str, enum.Enum):
@@ -40,6 +40,7 @@ class Job(Base):
     alignment_score = relationship("GoalAlignmentScore", back_populates="job", uselist=False, cascade="all, delete-orphan")
     recommended_channels = relationship("RecommendedChannel", back_populates="job", cascade="all, delete-orphan")
     logs = relationship("JobLog", back_populates="job", cascade="all, delete-orphan", order_by="JobLog.timestamp.asc()")
+    dag_nodes = relationship("DAGNode", back_populates="job", cascade="all, delete-orphan")
 
 class RawRecord(Base):
     __tablename__ = "raw_records"
@@ -136,3 +137,51 @@ class JobLog(Base):
 
     job = relationship("Job", back_populates="logs")
 
+class DAGNode(Base):
+    __tablename__ = "dag_nodes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    job_id = Column(String, ForeignKey("jobs.id"), nullable=False, index=True)
+    parent_id = Column(Integer, ForeignKey("dag_nodes.id"), nullable=True, index=True)
+    title = Column(Text, nullable=False)
+    description = Column(Text, nullable=True)
+    is_completed = Column(Integer, default=0)
+    progress_pct = Column(Float, default=0.0)
+    embedding_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    job = relationship("Job", back_populates="dag_nodes")
+    children = relationship("DAGNode", backref=backref("parent", remote_side=[id]))
+
+class CommentIntent(str, enum.Enum):
+    REQUEST = "REQUEST"
+    CONFUSION = "CONFUSION"
+    PRAISE = "PRAISE"
+    DEBATE = "DEBATE"
+
+class MinedComment(Base):
+    __tablename__ = "mined_comments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    video_id = Column(String, index=True, nullable=False)
+    comment_id = Column(String, unique=True, index=True, nullable=False)
+    author_name = Column(String, nullable=True)
+    text_display = Column(Text, nullable=False)
+    like_count = Column(Integer, default=0)
+    published_at = Column(DateTime, nullable=True)
+    intent_label = Column(Enum(CommentIntent), nullable=True)
+    sentiment_score = Column(Float, nullable=True)
+    cached_at = Column(DateTime, default=datetime.utcnow)
+
+
+class VASEvaluation(Base):
+    __tablename__ = "vas_evaluations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String, nullable=False)
+    hook_script = Column(Text, nullable=False)
+    title_score = Column(Float, nullable=False)
+    thumbnail_score = Column(Float, nullable=False)
+    hook_score = Column(Float, nullable=False)
+    overall_vas = Column(Float, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
