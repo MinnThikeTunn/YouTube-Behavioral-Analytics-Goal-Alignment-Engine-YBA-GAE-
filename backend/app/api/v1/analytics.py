@@ -12,6 +12,7 @@ from app.schemas.analytics import (
     AnalyticsResultDTO, ComputedMetricDTO, GoalAlignmentScoreDTO,
     RecommendedChannelDTO, TopicCategoryBreakdownDTO, HourlyAlignmentDTO, BehavioralNudgeDTO
 )
+from app.schemas.velocity import VelocityAnalyticsResponseDTO
 
 logger = logging.getLogger(__name__)
 
@@ -219,3 +220,32 @@ def get_analytics_results(job_id: str, db: Session = Depends(get_db)):
         nudges=nudges_dto
     )
 
+@router.get("/analytics/{job_id}/velocity", response_model=VelocityAnalyticsResponseDTO)
+def get_velocity_analytics(job_id: str, db: Session = Depends(get_db)):
+    """
+    Returns velocity analytics and fatigue windows.
+    """
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job with ID '{job_id}' not found."
+        )
+    
+    from app.services.velocity_engine import VelocityEngine
+    return VelocityEngine.calculate_velocity(db, job_id)
+
+@router.get("/analytics/{job_id}/cohort")
+def get_cohort_analytics(job_id: str, db: Session = Depends(get_db)):
+    """
+    Returns anonymized peer cohort benchmarking.
+    """
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job with ID '{job_id}' not found."
+        )
+    
+    from app.services.cohort_engine import CohortEngine
+    return CohortEngine.calculate_cohort_analytics(db, job_id)

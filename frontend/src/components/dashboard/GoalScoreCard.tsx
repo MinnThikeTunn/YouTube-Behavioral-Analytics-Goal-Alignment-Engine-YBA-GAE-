@@ -2,14 +2,15 @@ import React from 'react';
 import { Card } from '../common/Card';
 import { MetricBadge } from '../common/MetricBadge';
 import { GoalAlignmentScoreDTO } from '../../types';
-import { Sparkles, Target, Info } from 'lucide-react';
+import { Sparkles, Target, Info, Edit3 } from 'lucide-react';
 
 interface GoalScoreCardProps {
   alignmentScore?: GoalAlignmentScoreDTO;
   goalText: string;
+  onEditGoal?: () => void;
 }
 
-export const GoalScoreCard: React.FC<GoalScoreCardProps> = ({ alignmentScore, goalText }) => {
+export const GoalScoreCard: React.FC<GoalScoreCardProps> = ({ alignmentScore, goalText, onEditGoal }) => {
   const score = alignmentScore?.alignment_probability_score ?? 0;
 
   let badgeColor = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
@@ -27,11 +28,20 @@ export const GoalScoreCard: React.FC<GoalScoreCardProps> = ({ alignmentScore, go
     <Card className="relative overflow-hidden bg-gradient-to-br from-white/90 via-white/80 to-teal-500/5 dark:from-[#1c1d1f] dark:via-[#1c1d1f] dark:to-teal-500/10 p-8 lg:p-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2.5 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
               <Target className="w-3.5 h-3.5 text-teal-500" />
               Target Goal: <span className="text-slate-900 dark:text-white font-bold">{goalText}</span>
             </span>
+            {onEditGoal && (
+              <button
+                onClick={onEditGoal}
+                className="px-2.5 py-1 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 border border-teal-500/20 text-[11px] font-bold transition-all flex items-center gap-1"
+              >
+                <Edit3 className="w-3 h-3" />
+                Change Goal
+              </button>
+            )}
           </div>
           <h2 className="font-black text-2xl lg:text-3xl text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
             Goal Alignment Score
@@ -43,6 +53,7 @@ export const GoalScoreCard: React.FC<GoalScoreCardProps> = ({ alignmentScore, go
           {badgeLabel}
         </span>
       </div>
+
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
         <div className="md:col-span-5 flex items-baseline gap-4">

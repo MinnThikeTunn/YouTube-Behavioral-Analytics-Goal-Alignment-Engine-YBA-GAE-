@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube DOM Scraper",
+  "version": "1.0",
+  "description": "Scrapes YouTube DOM and maintains keepalive.",
+  "permissions": ["storage"],
+  "host_permissions": ["*://*.youtube.com/*", "http://localhost:8000/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

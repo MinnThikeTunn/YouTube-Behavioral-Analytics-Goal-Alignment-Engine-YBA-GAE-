@@ -1,0 +1,41 @@
+/* Perplexity design system styling */
+:root {
+  --bg-primary: #121212;
+  --text-primary: #ffffff;
+  --border-radius: 32px;
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-blur: blur(12px);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.scraper-container,
+.focus-shield-content,
+.floating-badge,
+.btn {
+  border-radius: var(--border-radius);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+}
+
+.scraper-container {
+  padding: 24px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.scraper-container:hover {
+  transform: translateY(-2px);
+}
+
+h1, h2, h3 {
+  font-weight: 900;
+}

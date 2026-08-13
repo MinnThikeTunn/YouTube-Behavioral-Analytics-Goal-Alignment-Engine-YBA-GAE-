@@ -33,4 +33,35 @@
 - **Behavioral Nudge Rule Engine**: Hybrid threshold-based and LLM-synthesized evaluation system generating actionable warnings (*Switching Threshold Alert*, *Focus Goal Goalpost*, *Late-Night Viewing Warning*) based on exact metrics and math, enhanced by Gemini API tailored phrasing when available.
 - **Focus Goal Goalpost**: Quantified behavioral target calculating exact count of non-aligned video clicks to swap with goal-aligned content to elevate `Focus Ratio` to a target percentage.
 
+### Real-Time Extension & Telemetry Entities
+- **Chrome Extension Agent (MV3)**: Lightweight browser extension running DOM scraping scripts on `youtube.com` and a Manifest V3 background service worker with 20-second WebSocket keepalive heartbeats.
+- **Real-Time Stream Receiver (`/api/v1/sync/stream`)**: FastAPI endpoint receiving real-time watch heartbeats (video ID, title, channel name, dwell seconds, DOM tags) and running sub-12ms ONNX INT8 quantized vector cosine similarity scoring.
+- **Shadow DOM Focus Shield**: Isolated overlay modal (`attachShadow({ mode: 'open' })`) injected into YouTube's `ytd-app` DOM to display floating alignment pills and shield nudges when alignment drops below configured threshold.
+- **Broadcaster Hub (`ws://.../api/v1/ws/live`)**: WebSocket manager pushing real-time session velocity, live activity events, and updated focus scores to the React Web Dashboard.
+
+### Creator Intelligence Mode Entities
+- **Audience Intent Classifier**: Zero-shot NLP comment clustering engine (`commentThreads.list` at 1 unit quota per 100 comments) extracting qualitative viewer demand buckets (*Planning trip*, *Budget travel*, *Tutorial request*).
+- **Hierarchical Niche Trend Radar**: Dynamic momentum metric $T_i = w_1 \cdot \text{ViewGrowth} + w_2 \cdot \text{Velocity} + w_3 \cdot \text{Engagement} - w_4 \cdot \text{Saturation}$ ranking subtopic velocity in creator niches.
+- **Video Opportunity Score ($VOS$)**: Composite ROI score ($VOS \in [0..100]$) identifying high-demand missing topics by evaluating trend momentum, audience interest, channel relevance, and competitor saturation.
+- **Viewer Attraction Score ($VAS$)**: Pre-publish packaging score ($VAS = 0.25 \cdot T_{trend} + 0.20 \cdot G_{match} + 0.20 \cdot Title + 0.20 \cdot Visual + 0.15 \cdot Hook$) synthesizing title NLP, OpenCV thumbnail vision readability, and hook script retention.
+
+## Architecture Decision Records (ADRs)
+
+### ADR-001: Phase-by-Phase Iterative Roadmap Rollout
+- **Status:** Accepted
+- **Context:** `docs/FEATURE_ROADMAP.md` spans 4 major platform phases across Viewer real-time intervention, behavioral velocity, Creator Mode intent engines, and package optimization.
+- **Decision:** Execute rollout iteratively starting with **Phase 1 (Chrome Extension Agent + FastAPI Stream + Shadow DOM Focus Shield)** to establish live YouTube DOM telemetry before building downstream analytics.
+
+### ADR-002: Standalone `/extension` Directory with Vanilla JS/CSS
+- **Status:** Accepted
+- **Context:** The Manifest V3 Chrome Extension needs to be easy to inspect, fast to develop, and installable into Chrome without build overhead.
+- **Decision:** Maintain a standalone `/extension` folder containing raw Manifest V3 files (`manifest.json`, `content.js`, `background.js`, `styles.css`) for zero-build "Load Unpacked" development.
+
+### ADR-003: Dual-Engine Vector Embeddings (ONNX INT8 Quantization)
+- **Status:** Accepted
+- **Context:** Sub-50ms latency is required for real-time streaming heartbeats without blocking FastAPI event loops.
+- **Decision:** Implement ONNX Runtime INT8 dynamic quantization for sub-12ms embedding scoring on `/api/v1/sync/stream`, with automatic fallback to PyTorch `sentence-transformers`.
+
+
+
 
