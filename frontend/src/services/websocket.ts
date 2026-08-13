@@ -39,7 +39,11 @@ export const useWebSocket = (url: string) => {
       try {
         const payload: WebSocketMessage = JSON.parse(event.data);
         if (payload.type === 'WATCH_UPDATE' && payload.data) {
-          setMessages((prev) => [payload.data!, ...prev].slice(0, 10)); // Keep last 10 messages
+          const newItem = payload.data;
+          setMessages((prev) => {
+            const filtered = prev.filter((item) => item.video_id !== newItem.video_id);
+            return [newItem, ...filtered].slice(0, 10);
+          });
         }
       } catch (err) {
         console.error('Error parsing WebSocket message', err);

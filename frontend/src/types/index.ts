@@ -170,6 +170,7 @@ export interface VideoOpportunityDTO {
   vos_score: number;
   opportunity_tier: string;
   recommended_titles: string[];
+  goal_alignment_score?: number;
 }
 
 export interface ContentGapMatrixResponseDTO {
@@ -192,3 +193,81 @@ export interface VASEvalResponseDTO {
   recommendations: string[];
   improved_title_ideas: string[];
 }
+
+export interface ClosedLoopResponseDTO {
+  total_evaluations: number;
+  tuned_weights: Record<string, number>;
+  accuracy_pct: number;
+  mean_absolute_error: number;
+  recommendations: string[];
+  status: string;
+}
+
+export interface ThumbnailVisionResultDTO {
+  brightness: number;
+  contrast: number;
+  color_saturation: number;
+  sharpness: number;
+  color_balance: number;
+  visual_impact_score: number;
+  legibility_score: number;
+  readability_grade: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR';
+  dominant_colors: string[];
+}
+
+export interface IntentDistributionBreakdownDTO {
+  intent_label: 'REQUEST' | 'CONFUSION' | 'PRAISE' | 'DEBATE';
+  count: number;
+  percentage: number;
+}
+
+export interface TopicIntentHeatmapCellDTO {
+  topic: string;
+  intent_label: 'REQUEST' | 'CONFUSION' | 'PRAISE' | 'DEBATE';
+  comment_count: number;
+  heat_score: number;
+}
+
+export interface ChannelIntentDistributionDTO {
+  total_comments_analyzed: number;
+  total_videos_analyzed: number;
+  distribution: IntentDistributionBreakdownDTO[];
+  heatmap: TopicIntentHeatmapCellDTO[];
+  top_feature_requests: string[];
+  top_confusion_points: string[];
+  channel_sentiment_index: number;
+}
+
+export interface FactorScoreDTO {
+  factor_key: string;
+  factor_name: string;
+  score: number;
+  weight: number;
+  description: string;
+}
+
+export interface Composite8FactorScoreDTO {
+  composite_overall_score: number;
+  factors: FactorScoreDTO[];
+}
+
+export interface ClosedLoopSyncRequestDTO {
+  evaluation_id?: number;
+  actual_ctr: number;
+  actual_retention_30s: number;
+  actual_views: number;
+}
+
+export interface ClosedLoopTelemetryResultDTO {
+  status: string;
+  total_evaluations: number;
+  tuned_weights: Record<string, number>;
+  accuracy_pct: number;
+  mean_absolute_error: number;
+  weight_delta_w1: number;
+  weight_delta_w2: number;
+  weight_delta_w3: number;
+  message: string;
+}
+
+

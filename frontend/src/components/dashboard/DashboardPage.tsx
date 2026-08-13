@@ -26,6 +26,7 @@ interface DashboardPageProps {
   jobStatus: JobStatusResponseDTO;
   goalText: string;
   onReset: () => void;
+  onEditGoal?: () => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -35,6 +36,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   jobStatus,
   goalText,
   onReset,
+  onEditGoal,
 }) => {
   const [activeTab, setActiveTab] = React.useState<'VIEWER' | 'CREATOR'>('VIEWER');
 
@@ -74,6 +76,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </button>
           </div>
 
+          {onEditGoal && (
+            <button
+              onClick={onEditGoal}
+              className="py-2.5 px-4 rounded-2xl border border-teal-500/30 bg-teal-500/10 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 transition-all text-xs font-bold flex items-center gap-2 shadow-sm"
+            >
+              <Target className="w-3.5 h-3.5" />
+              Edit Goal
+            </button>
+          )}
+
           <button
             onClick={onReset}
             className="py-2.5 px-4 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-all text-xs font-semibold flex items-center gap-2 shadow-sm"
@@ -98,7 +110,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       <GoalScoreCard
         alignmentScore={analytics.alignment_score}
         goalText={goalText}
+        onEditGoal={onEditGoal}
       />
+
 
       <DAGSkillGraph jobId={jobStatus.job_id} />
       <BehavioralNudges nudges={analytics.nudges} />

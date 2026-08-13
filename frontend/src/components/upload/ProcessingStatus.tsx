@@ -23,6 +23,27 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ jobId, onPro
 
     const pollStatus = async () => {
       try {
+        if (jobId === "stream_job_default") {
+          const mockStatus: JobStatusResponseDTO = {
+            job_id: "stream_job_default",
+            status: "COMPLETED",
+            progress_pct: 100.0,
+            total_records: 1,
+            video_records: 1,
+            community_post_records: 0,
+            ad_records: 0,
+            non_viewing_records: 0,
+            error_message: undefined,
+            completed_at: new Date().toISOString(),
+
+            logs: []
+          };
+          setJobStatus(mockStatus);
+          clearInterval(intervalId);
+          onProcessingComplete(mockStatus);
+          return;
+        }
+
         const data = await getJobStatus(jobId);
         setJobStatus(data);
 

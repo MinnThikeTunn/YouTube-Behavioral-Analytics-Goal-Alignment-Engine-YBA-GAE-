@@ -17,6 +17,14 @@ export const ChannelRecommendations: React.FC<ChannelRecommendationsProps> = ({
   const watchedChannels = recommendations.filter((r) => (r.category || 'watched') === 'watched');
   const discoveryChannels = recommendations.filter((r) => r.category === 'discovery');
 
+  React.useEffect(() => {
+    if (watchedChannels.length === 0 && discoveryChannels.length > 0) {
+      setActiveTab('discovery');
+    } else if (discoveryChannels.length === 0 && watchedChannels.length > 0) {
+      setActiveTab('watched');
+    }
+  }, [recommendations.length, watchedChannels.length, discoveryChannels.length]);
+
   const displayedChannels = activeTab === 'watched' ? watchedChannels : discoveryChannels;
 
   return (
@@ -96,7 +104,7 @@ export const ChannelRecommendations: React.FC<ChannelRecommendationsProps> = ({
                       {chan.channel_title}
                     </h4>
                     <p className="text-xs text-slate-500 dark:text-zinc-400 line-clamp-2">
-                      {chan.channel_description || 'High-alignment educational channel.'}
+                      {chan.channel_description || `High-alignment educational content for ${goalText}.`}
                     </p>
                   </div>
                 </div>

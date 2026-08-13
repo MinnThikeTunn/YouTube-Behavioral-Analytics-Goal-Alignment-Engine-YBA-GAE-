@@ -3,10 +3,15 @@ import { useWebSocket } from '../../services/websocket';
 import { Activity, Circle, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
 import { Card } from '../common/Card';
 
-const WS_URL = 'ws://localhost:8000/api/v1/sync/ws/live';
+const getWsUrl = () => {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'localhost:8000' : window.location.host;
+  return `${protocol}//${host}/api/v1/sync/ws/live`;
+};
 
 export const LiveStreamWidget: React.FC = () => {
-  const { isConnected, messages } = useWebSocket(WS_URL);
+  const wsUrl = getWsUrl();
+  const { isConnected, messages } = useWebSocket(wsUrl);
 
   const getClassificationIcon = (classification: string) => {
     switch (classification) {
@@ -78,7 +83,7 @@ export const LiveStreamWidget: React.FC = () => {
                     {msg.classification}
                   </span>
                   <span className="text-[10px] font-medium text-slate-400 dark:text-zinc-500">
-                    Score: {(msg.alignment_score * 100).toFixed(0)}%
+                    Score: {Math.round(msg.alignment_score <= 1.0 ? msg.alignment_score * 100 : msg.alignment_score)}%
                   </span>
                 </div>
               </div>

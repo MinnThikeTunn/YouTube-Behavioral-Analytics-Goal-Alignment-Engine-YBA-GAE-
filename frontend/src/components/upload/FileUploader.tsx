@@ -73,13 +73,23 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onUploadSuccess }) =
 
   return (
     <Card className="max-w-3xl mx-auto my-8">
-      <div className="mb-6">
-        <h2 className="font-black text-2xl tracking-tight text-slate-900 dark:text-white mb-1">
-          Upload YouTube Watch History
-        </h2>
-        <p className="text-sm text-slate-500 dark:text-zinc-400">
-          Upload your Google Takeout <code className="text-teal-600 dark:text-teal-400">watch-history.json</code> file to calculate behavioral proxies and goal alignment.
-        </p>
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="font-black text-2xl tracking-tight text-slate-900 dark:text-white mb-1">
+            YouTube Behavioral Analytics Engine
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">
+            Analyze historical Takeout exports or connect your real-time Chrome Extension telemetry.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onUploadSuccess({ job_id: "stream_job_default", status: "PROCESSING", message: "Live extension mode", created_at: new Date().toISOString() })}
+          className="px-5 py-3 rounded-full bg-gradient-to-r from-teal-500 to-emerald-600 text-white font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all shadow-lg flex items-center justify-center gap-2 whitespace-nowrap"
+        >
+
+          <span>⚡ Launch Live Extension Dashboard</span>
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
