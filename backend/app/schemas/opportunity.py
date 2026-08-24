@@ -8,6 +8,7 @@ class VideoOpportunityDTO(BaseModel):
     vos_score: float
     opportunity_tier: str
     recommended_titles: List[str]
+    goal_alignment_score: float = 85.0
 
 class ContentGapMatrixResponseDTO(BaseModel):
     opportunities: List[VideoOpportunityDTO]

@@ -29,3 +29,27 @@ class CommentMiningResponseDTO(BaseModel):
     video_id: str
     total_mined: int
     comments: List[MinedCommentDTO]
+
+
+class IntentDistributionBreakdownDTO(BaseModel):
+    intent_label: str       # REQUEST | CONFUSION | PRAISE | DEBATE
+    count: int
+    percentage: float
+
+
+class TopicIntentHeatmapCellDTO(BaseModel):
+    topic: str
+    intent_label: str
+    comment_count: int
+    heat_score: float       # Normalized intensity 0.0 - 100.0
+
+
+class ChannelIntentDistributionDTO(BaseModel):
+    total_comments_analyzed: int
+    total_videos_analyzed: int
+    distribution: List[IntentDistributionBreakdownDTO]
+    heatmap: List[TopicIntentHeatmapCellDTO]
+    top_feature_requests: List[str]
+    top_confusion_points: List[str]
+    channel_sentiment_index: float
+

@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = f"sqlite:///{DATA_DIR / 'app.db'}"
     YOUTUBE_API_KEY: str = os.getenv("YOUTUBE_API_KEY", "")
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
     
     model_config = SettingsConfigDict(
         case_sensitive=True,

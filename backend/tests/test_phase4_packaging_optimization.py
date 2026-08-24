@@ -303,3 +303,53 @@ def test_detailed_vas_analysis_endpoint():
     assert "improved_title_ideas" in data
     assert len(data["improved_title_ideas"]) == 5
     assert data["improved_title_ideas"][0]["pattern_type"] == "Number Hook"
+
+
+# ═══════════════════════════════════════════════════════════
+#  Phase 4 Ticket 03 — Closed-Loop Telemetry Tests
+# ═══════════════════════════════════════════════════════════
+
+
+def test_closed_loop_telemetry_service(db):
+    svc = PackagingOptimizerService
+
+    # Clear pre-existing VASEvaluations for isolation in this test
+    db.query(VASEvaluation).delete()
+    db.commit()
+
+    # Initial state with no evaluations
+    initial = svc.get_closed_loop_telemetry(db)
+    assert initial.total_evaluations == 0
+    assert initial.status == "INITIALIZING"
+    assert "w1_title" in initial.tuned_weights
+    assert initial.accuracy_pct > 80.0
+
+    # Add VAS evaluation records to trigger tuning active state
+    req = VASEvalRequestDTO(
+        title="Test Title for Closed Loop Tuning",
+        hook_script="In this video we test closed loop telemetry auto tuning engine.",
+        thumbnail_brightness=0.6,
+        thumbnail_contrast=0.7,
+    )
+    svc.evaluate(req, db)
+
+    tuned = svc.get_closed_loop_telemetry(db)
+    assert tuned.total_evaluations == 1
+    assert tuned.status == "TUNING_ACTIVE"
+    assert len(tuned.recommendations) >= 1
+
+
+
+def test_closed_loop_telemetry_endpoint():
+    response = client.get("/api/v1/creator/closed-loop")
+    assert response.status_code == 200
+
+    data = response.json()
+    assert "total_evaluations" in data
+    assert "tuned_weights" in data
+    assert "accuracy_pct" in data
+    assert "mean_absolute_error" in data
+    assert "status" in data
+    assert "recommendations" in data
+    assert data["status"] in ("INITIALIZING", "TUNING_ACTIVE", "OPTIMAL")
+

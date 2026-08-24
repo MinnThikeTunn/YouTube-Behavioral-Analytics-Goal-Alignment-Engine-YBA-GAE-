@@ -45,3 +45,11 @@ class TrendRadarEngine:
             trends=trends,
             overall_market_sentiment=overall_sentiment
         )
+
+    def fetch_dynamic_niche_trends(self, query: str = "software development AI tech trends") -> NicheTrendRadarResponseDTO:
+        """Dynamically fetch niche trends using Tavily Search API / Gemini / heuristics and analyze velocities."""
+        from app.services.tavily_search import TavilySearchService
+        tavily = TavilySearchService()
+        dynamic_data = tavily.search_niche_trends(query)
+        return self.analyze_trends(dynamic_data)
+

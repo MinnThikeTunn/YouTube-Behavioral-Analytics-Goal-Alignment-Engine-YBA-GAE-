@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 class StreamTelemetrySchema(BaseModel):
+    job_id: Optional[str] = None
     video_id: str
     title: Optional[str] = None
     channel_name: Optional[str] = None

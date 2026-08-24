@@ -34,7 +34,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         chrome.storage.session.set({ lastTelemetry: message.data });
         
         // HTTP POST stream relay
-        fetch("http://localhost:8000/api/v1/sync/telemetry", {
+        fetch("http://localhost:8000/api/v1/sync/stream", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"

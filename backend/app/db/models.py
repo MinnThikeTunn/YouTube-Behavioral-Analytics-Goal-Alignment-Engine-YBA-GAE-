@@ -185,3 +185,17 @@ class VASEvaluation(Base):
     hook_score = Column(Float, nullable=False)
     overall_vas = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class VASPostPublishTelemetry(Base):
+    __tablename__ = "vas_post_publish_telemetry"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    evaluation_id = Column(Integer, ForeignKey("vas_evaluations.id"), nullable=True)
+    actual_ctr = Column(Float, nullable=False)
+    actual_retention_30s = Column(Float, nullable=False)
+    actual_views = Column(Integer, nullable=False)
+    synced_at = Column(DateTime, default=datetime.utcnow)
+
+    evaluation = relationship("VASEvaluation", backref="telemetry_records")
+

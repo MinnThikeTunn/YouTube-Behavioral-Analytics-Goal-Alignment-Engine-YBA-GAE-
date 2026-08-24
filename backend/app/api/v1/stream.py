@@ -34,15 +34,15 @@ async def sync_stream(payload: StreamTelemetrySchema, db: Session = Depends(get_
     except ValueError:
         timestamp_dt = datetime.utcnow()
         
-    job_id = "stream_job_default"
-    job = db.query(Job).filter(Job.id == job_id).first()
+    target_job_id = payload.job_id or "stream_job_default"
+    job = db.query(Job).filter(Job.id == target_job_id).first()
     if not job:
-        job = Job(id=job_id, status=JobStatus.PROCESSING, goal_text=payload.goal_text)
+        job = Job(id=target_job_id, status=JobStatus.PROCESSING, goal_text=payload.goal_text)
         db.add(job)
         db.commit()
 
     record = RawRecord(
-        job_id=job_id,
+        job_id=target_job_id,
         timestamp=timestamp_dt,
         raw_title=payload.title or payload.video_id,
         title_url=f"https://www.youtube.com/watch?v={payload.video_id}",
@@ -51,7 +51,16 @@ async def sync_stream(payload: StreamTelemetrySchema, db: Session = Depends(get_
     )
     db.add(record)
     db.commit()
-    
+
+    # Re-evaluate real-time metrics & goal alignment for target_job_id dynamically
+    try:
+        from app.services.proxy_metrics import ProxyMetricsEngine
+        from app.services.goal_alignment import GoalAlignmentEngine
+        ProxyMetricsEngine.compute_job_metrics(db, target_job_id)
+        GoalAlignmentEngine.evaluate_job_alignment(db, target_job_id, payload.goal_text)
+    except Exception as e:
+        pass
+
     score_dto = StreamScoreResponseDTO(
         video_id=payload.video_id,
         alignment_score=score_result["score"],
@@ -60,5 +69,14 @@ async def sync_stream(payload: StreamTelemetrySchema, db: Session = Depends(get_
     )
     
     await broadcaster.broadcast_watch_update(payload, score_dto)
-    
+
+    # Re-evaluate velocity analytics and broadcast VELOCITY_UPDATE over WebSocket
+    try:
+        from app.services.velocity_engine import VelocityEngine
+        vel_analytics = VelocityEngine.calculate_velocity(db, target_job_id)
+        await broadcaster.broadcast_velocity_update(target_job_id, vel_analytics)
+    except Exception as e:
+        pass
+
     return score_dto
+

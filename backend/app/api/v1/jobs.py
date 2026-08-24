@@ -2,13 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.db.models import Job
-from app.schemas.job import JobStatusResponseDTO, JobLogDTO
+from app.schemas.job import JobStatusResponseDTO, JobLogDTO, GoalUpdateDTO
+
+from app.services.job_service import get_job_or_create_default
 
 router = APIRouter()
 
 @router.get("/jobs/{job_id}/status", response_model=JobStatusResponseDTO)
 def get_job_status(job_id: str, db: Session = Depends(get_db)):
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = get_job_or_create_default(db, job_id)
     if not job:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -28,3 +30,46 @@ def get_job_status(job_id: str, db: Session = Depends(get_db)):
         completed_at=job.completed_at,
         logs=[JobLogDTO.model_validate(log) for log in job.logs]
     )
+
+@router.patch("/jobs/{job_id}/goal")
+def update_job_goal(job_id: str, payload: GoalUpdateDTO, db: Session = Depends(get_db)):
+    job = get_job_or_create_default(db, job_id)
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job with ID '{job_id}' not found."
+        )
+
+
+    job.goal_text = payload.goal_text.strip()
+    db.commit()
+
+    # Clear existing recommendations & re-evaluate goal alignment & DAG taxonomy graph
+    from app.db.models import RecommendedChannel
+    from app.services.goal_alignment import GoalAlignmentEngine, RecommendationEngine
+    from app.services.dag_engine import DAGEngine
+
+    db.query(RecommendedChannel).filter(RecommendedChannel.job_id == job_id).delete()
+    db.commit()
+
+    try:
+        RecommendationEngine.generate_and_save_recommendations(
+            db=db,
+            job_id=job_id,
+            goal_text=job.goal_text,
+            user_api_key=job.user_api_key
+        )
+    except Exception as e:
+        GoalAlignmentEngine.evaluate_job_alignment(db, job_id, job.goal_text)
+
+    try:
+        DAGEngine.build_dag_for_job(db, job_id)
+    except Exception as e:
+        pass
+
+    return {
+        "status": "success",
+        "job_id": job.id,
+        "goal_text": job.goal_text
+    }
+

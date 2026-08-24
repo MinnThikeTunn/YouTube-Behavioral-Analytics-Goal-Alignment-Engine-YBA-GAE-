@@ -40,3 +40,5 @@ class JobStatusResponseDTO(BaseModel):
     completed_at: Optional[datetime] = None
     logs: List[JobLogDTO] = []
 
+class GoalUpdateDTO(BaseModel):
+    goal_text: str
