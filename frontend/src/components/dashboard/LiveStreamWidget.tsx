@@ -27,27 +27,27 @@ export const LiveStreamWidget: React.FC = () => {
   const getClassificationColor = (classification: string) => {
     switch (classification) {
       case 'ALIGNED':
-        return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400';
+        return 'bg-[#c8e6c9] text-[#1b5e20] dark:bg-[#1b5e20]/60 dark:text-[#a5d6a7] border border-[#2ba640]/30';
       case 'DISTRACTING':
-        return 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400';
+        return 'bg-[#ffcccc] text-[#8b0000] dark:bg-[#8b0000]/60 dark:text-[#ff9999] border border-[#e1002d]/30';
       default:
-        return 'bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400';
+        return 'bg-[#eeeeee] text-[#606060] dark:bg-[#383838] dark:text-[#aaaaaa] border border-[#dbdbdb] dark:border-[#3f3f3f]';
     }
   };
 
   return (
-    <Card className="rounded-[32px] overflow-hidden backdrop-blur-xl bg-white/70 dark:bg-zinc-900/70 border border-slate-200/50 dark:border-zinc-800/50 shadow-sm transition-all duration-300">
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
+    <Card className="rounded-2xl border border-[#dbdbdb] dark:border-[#272727] bg-white dark:bg-[#1f1f1f] shadow-yt-sm hover:shadow-yt-md transition-all duration-200">
+      <div>
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-2xl ${isConnected ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400'}`}>
+            <div className={`p-2 rounded-full ${isConnected ? 'bg-[#c8e6c9] text-[#1b5e20] dark:bg-[#1b5e20]/50 dark:text-[#a5d6a7]' : 'bg-[#ffcccc] text-[#8b0000] dark:bg-[#8b0000]/50 dark:text-[#ff9999]'}`}>
               <Activity className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-black text-xl text-slate-900 dark:text-white">Live Activity Stream</h3>
+              <h3 className="font-headline text-lg font-bold text-[#0f0f0f] dark:text-white">Live Activity Stream</h3>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <Circle className={`w-2 h-2 fill-current ${isConnected ? 'text-emerald-500 animate-pulse' : 'text-amber-500'}`} />
-                <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">
+                <Circle className={`w-2 h-2 fill-current ${isConnected ? 'text-[#2ba640] animate-pulse' : 'text-[#e1002d]'}`} />
+                <span className="text-xs font-medium text-[#606060] dark:text-[#aaaaaa]">
                   {isConnected ? 'Connected to Hub' : 'Reconnecting...'}
                 </span>
               </div>
@@ -55,34 +55,34 @@ export const LiveStreamWidget: React.FC = () => {
           </div>
         </div>
 
-        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+        <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Activity className="w-8 h-8 text-slate-300 dark:text-zinc-700 mb-2" />
-              <p className="text-sm text-slate-500 dark:text-zinc-400">Waiting for live activity...</p>
+              <Activity className="w-8 h-8 text-[#dbdbdb] dark:text-[#3f3f3f] mb-2" />
+              <p className="text-xs text-[#606060] dark:text-[#aaaaaa]">Waiting for live activity...</p>
             </div>
           ) : (
             messages.map((msg, idx) => (
               <div 
                 key={`${msg.video_id}-${msg.timestamp}-${idx}`}
-                className="flex items-start gap-4 p-4 rounded-2xl bg-white dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-800 shadow-sm animate-fadeIn"
+                className="flex items-start gap-3.5 p-3.5 rounded-xl bg-[#f9f9f9] dark:bg-[#272727] border border-[#dbdbdb] dark:border-[#2e2e2e] shadow-sm animate-fadeIn"
               >
                 <div className="mt-0.5">
                   {getClassificationIcon(msg.classification)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                  <p className="text-xs sm:text-sm font-semibold text-[#0f0f0f] dark:text-white truncate">
                     {msg.title || msg.video_id}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1 truncate">
+                  <p className="text-xs text-[#606060] dark:text-[#aaaaaa] mt-0.5 truncate">
                     {msg.channel_name || 'Unknown Channel'}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${getClassificationColor(msg.classification)}`}>
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider ${getClassificationColor(msg.classification)}`}>
                     {msg.classification}
                   </span>
-                  <span className="text-[10px] font-medium text-slate-400 dark:text-zinc-500">
+                  <span className="text-[10px] font-medium text-[#606060] dark:text-[#aaaaaa]">
                     Score: {Math.round(msg.alignment_score <= 1.0 ? msg.alignment_score * 100 : msg.alignment_score)}%
                   </span>
                 </div>
@@ -94,3 +94,6 @@ export const LiveStreamWidget: React.FC = () => {
     </Card>
   );
 };
+
+export default LiveStreamWidget;
+

@@ -107,16 +107,12 @@ class ProxyMetricsEngine:
         late_night_clicks = 0
         for rec in records:
             dt = rec.timestamp
-            if dt.tzinfo is not None:
-                local_dt = dt.astimezone()
-            else:
-                local_dt = dt.replace(tzinfo=timezone.utc).astimezone()
-            
-            hour = local_dt.hour
+            hour = dt.hour if dt.tzinfo is None else dt.astimezone().hour
             if hour >= 23 or hour < 5:
                 late_night_clicks += 1
 
         return (late_night_clicks / float(len(records))) * 100.0
+
 
     @classmethod
     def compute_job_metrics(cls, db: Session, job_id: str) -> ComputedMetric:

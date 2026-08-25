@@ -187,4 +187,37 @@ export const syncClosedLoopTelemetry = async (
   return response.data;
 };
 
+export const syncStreamBatch = async (payload: {
+  items: Array<{ video_id: string; title?: string; channel_name?: string; timestamp: string; goal_text: string }>;
+  goal_text?: string;
+  job_id?: string;
+}): Promise<{ status: string; ingested_count: number; message: string }> => {
+  const response = await axios.post(
+    `${API_BASE_URL}/sync/stream/batch`,
+    payload
+  );
+  return response.data;
+};
+
+export const evaluateABPackaging = async (
+  payload: any
+): Promise<any> => {
+  const response = await axios.post(
+    `${API_BASE_URL}/creator/packaging/ab-matrix`,
+    payload
+  );
+  return response.data;
+};
+
+export const generateHookScripts = async (
+  payload: { title: string; topic?: string; target_audience?: string }
+): Promise<any> => {
+  const response = await axios.post(
+    `${API_BASE_URL}/creator/packaging/generate-hooks`,
+    payload
+  );
+  return response.data;
+};
+
+
 

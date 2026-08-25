@@ -3,6 +3,7 @@ console.log("YouTube DOM Scraper Content Script Loaded");
 
 let shadowRoot = null;
 let isPaused = false;
+let snoozeUntil = 0;
 let userGoal = "Software Engineering, Programming, Machine Learning";
 let activeJobId = "stream_job_default";
 let currentVideoId = "";
@@ -11,8 +12,9 @@ let dismissedForVideo = false;
 // Sync settings from chrome.storage.local
 function syncSettings() {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.get(['isPaused', 'userGoal', 'activeJobId'], (result) => {
+        chrome.storage.local.get(['isPaused', 'snoozeUntil', 'userGoal', 'activeJobId'], (result) => {
             if (result.isPaused !== undefined) isPaused = result.isPaused === true;
+            if (result.snoozeUntil !== undefined) snoozeUntil = Number(result.snoozeUntil) || 0;
             if (result.userGoal) userGoal = result.userGoal;
             if (result.activeJobId) activeJobId = result.activeJobId;
             updateOverlayUIState();
@@ -24,11 +26,16 @@ if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged)
     chrome.storage.onChanged.addListener((changes, areaName) => {
         if (areaName === 'local') {
             if (changes.isPaused) isPaused = changes.isPaused.newValue === true;
+            if (changes.snoozeUntil) snoozeUntil = Number(changes.snoozeUntil.newValue) || 0;
             if (changes.userGoal) userGoal = changes.userGoal.newValue;
             if (changes.activeJobId) activeJobId = changes.activeJobId.newValue;
             updateOverlayUIState();
         }
     });
+}
+
+function isSnoozed() {
+    return snoozeUntil > Date.now();
 }
 
 function updateOverlayUIState() {
@@ -41,16 +48,22 @@ function updateOverlayUIState() {
             badge.innerText = '⏸️ Monitoring Paused';
             badge.style.background = 'rgba(245, 158, 11, 0.25)';
             badge.style.borderColor = 'rgba(245, 158, 11, 0.5)';
+        } else if (isSnoozed()) {
+            const minsLeft = Math.ceil((snoozeUntil - Date.now()) / 60000);
+            badge.innerText = `☕ Break Mode (${minsLeft}m left)`;
+            badge.style.background = 'rgba(45, 212, 191, 0.25)';
+            badge.style.borderColor = 'rgba(45, 212, 191, 0.5)';
         } else {
             badge.style.background = 'rgba(255, 255, 255, 0.1)';
             badge.style.borderColor = 'rgba(255, 255, 255, 0.2)';
         }
     }
 
-    if (toast && isPaused) {
+    if (toast && (isPaused || isSnoozed())) {
         toast.style.display = 'none';
     }
 }
+
 
 function initOverlay() {
     if (document.getElementById('yba-overlay-root')) return;
@@ -230,7 +243,8 @@ function initOverlay() {
             <div id="toast-msg" class="toast-msg">Not aligned with goal</div>
         </div>
         <div class="toast-actions">
-            <button id="btn-toast-edit" class="toast-btn toast-btn-primary">🎯 Change Goal</button>
+            <button id="btn-toast-break" class="toast-btn toast-btn-primary">☕ 30m Break</button>
+            <button id="btn-toast-edit" class="toast-btn toast-btn-secondary">🎯 Goal</button>
             <button id="btn-toast-pause" class="toast-btn toast-btn-secondary">⏸️ Pause</button>
         </div>
     `;
@@ -240,6 +254,14 @@ function initOverlay() {
     shadowRoot.getElementById('btn-toast-dismiss').addEventListener('click', () => {
         dismissedForVideo = true;
         toast.style.display = 'none';
+    });
+
+    shadowRoot.getElementById('btn-toast-break').addEventListener('click', () => {
+        snoozeUntil = Date.now() + (30 * 60 * 1000);
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+            chrome.storage.local.set({ snoozeUntil: snoozeUntil });
+        }
+        updateOverlayUIState();
     });
 
     shadowRoot.getElementById('btn-toast-edit').addEventListener('click', () => {
@@ -253,6 +275,7 @@ function initOverlay() {
         }
         updateOverlayUIState();
     });
+
 
     badge.addEventListener('click', () => {
         // Toggle toast visibility manually on badge click

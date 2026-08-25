@@ -143,19 +143,19 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#131415] text-slate-900 dark:text-zinc-100 transition-colors duration-200">
+    <div className="min-h-screen bg-[#ffffff] dark:bg-[#0f0f0f] text-[#0f0f0f] dark:text-[#f1f1f1] transition-colors duration-200">
       <Header darkMode={darkMode} setDarkMode={setDarkMode} />
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-[1440px] mx-auto px-4 sm:px-6 py-8">
         {viewMode === 'ANALYTICS' && (
           <div className="flex justify-end gap-3 mb-6">
             <button
               onClick={() => setViewMode('GOAL_SETUP')}
               data-testid="edit-goal-nav-btn"
-              className="py-2 px-4 rounded-2xl border border-teal-500/30 bg-teal-500/10 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 transition-all text-xs font-bold flex items-center gap-2 shadow-sm"
+              className="h-10 px-4 rounded-full border border-[#dbdbdb] dark:border-[#3f3f3f] bg-[#f5f5f5] dark:bg-[#272727] text-[#0f0f0f] dark:text-[#f1f1f1] hover:bg-[#eeeeee] dark:hover:bg-[#383838] transition-all text-xs font-medium flex items-center gap-2 shadow-yt-sm"
             >
-              <Target className="w-4 h-4 text-teal-500" />
-              Target Goal: {currentGoal || 'Set Goal'} (Edit)
+              <Target className="w-4 h-4 text-[#e1002d]" />
+              <span>Target Goal: <strong className="font-semibold text-[#0f0f0f] dark:text-white">{currentGoal || 'Set Goal'}</strong> (Edit)</span>
             </button>
           </div>
         )}
@@ -169,11 +169,11 @@ export const App: React.FC = () => {
 
         {viewMode === 'ANALYTICS' && loadingAnalytics && (
           <Card className="max-w-xl mx-auto my-16 text-center p-12">
-            <Loader2 className="w-10 h-10 animate-spin text-teal-500 mx-auto mb-4" />
-            <h3 className="font-black text-xl text-slate-900 dark:text-white mb-1">
+            <Loader2 className="w-10 h-10 animate-spin text-[#e1002d] mx-auto mb-4" />
+            <h3 className="font-headline text-xl font-bold text-[#0f0f0f] dark:text-white mb-1">
               Building Analytics Dashboard
             </h3>
-            <p className="text-xs text-slate-500 dark:text-zinc-400">
+            <p className="text-xs text-[#606060] dark:text-[#aaaaaa]">
               Retrieving metrics, goal alignment scores, and channel recommendations...
             </p>
           </Card>
@@ -191,6 +191,7 @@ export const App: React.FC = () => {
           />
         )}
       </main>
+
 
       <GoalEditModal
         isOpen={isGoalModalOpen}

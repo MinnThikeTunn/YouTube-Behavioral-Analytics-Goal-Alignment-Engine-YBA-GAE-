@@ -166,18 +166,23 @@ class CommentMinerService:
 
         if mined_video_ids:
             comments = self.db.query(MinedComment).filter(MinedComment.video_id.in_(mined_video_ids)).all()
+        elif channel_handle:
+            # Channel handle specified but no videos mined or found
+            comments = []
         else:
+            # General channel intent query without specific handle
             comments = self.db.query(MinedComment).all()
 
         video_ids = set(c.video_id for c in comments) if comments else set(mined_video_ids)
         
-        if not video_ids and not comments:
+        if not video_ids and not comments and not channel_handle:
             try:
                 from app.db.models import RawRecord
                 raw_vids = self.db.query(RawRecord.video_id).filter(RawRecord.video_id.isnot(None)).distinct().all()
                 video_ids = set(v[0] for v in raw_vids if v[0])
             except Exception:
                 pass
+
 
         total_videos = len(video_ids)
         total_comments = len(comments)

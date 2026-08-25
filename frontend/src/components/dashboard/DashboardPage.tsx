@@ -49,28 +49,36 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const isHighDensity = sessionDensity > 15;
 
   return (
-    <div className="space-y-8 animate-fadeIn max-w-7xl mx-auto pb-16">
+    <div className="space-y-6 animate-fadeIn max-w-[1440px] mx-auto pb-16">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="font-black text-3xl tracking-tight text-slate-900 dark:text-white">
+          <h2 className="font-headline text-2xl sm:text-3xl font-bold tracking-tight text-[#0f0f0f] dark:text-white">
             YBA Dual-Mode Engine
           </h2>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-            Analyzing <strong className="text-slate-900 dark:text-white">{jobStatus.video_records.toLocaleString()}</strong> video events out of {jobStatus.total_records.toLocaleString()} raw records.
+          <p className="text-xs text-[#606060] dark:text-[#aaaaaa] mt-1">
+            Analyzing <strong className="text-[#0f0f0f] dark:text-white">{jobStatus.video_records.toLocaleString()}</strong> video events out of {jobStatus.total_records.toLocaleString()} raw records.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="p-1 rounded-2xl bg-slate-200/80 dark:bg-zinc-800/80 border border-slate-300 dark:border-zinc-700 flex text-xs font-bold">
+          <div className="p-1 rounded-full bg-[#eeeeee] dark:bg-[#272727] border border-[#dbdbdb] dark:border-[#3f3f3f] flex text-xs font-medium">
             <button
               onClick={() => setActiveTab('VIEWER')}
-              className={`px-4 py-1.5 rounded-xl transition-all ${activeTab === 'VIEWER' ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-sm font-black' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+              className={`px-4 py-1.5 rounded-full transition-all duration-200 ${
+                activeTab === 'VIEWER'
+                  ? 'bg-[#e1002d] text-white shadow-sm font-semibold'
+                  : 'text-[#606060] dark:text-[#aaaaaa] hover:text-[#0f0f0f] dark:hover:text-white'
+              }`}
             >
               Viewer Analytics
             </button>
             <button
               onClick={() => setActiveTab('CREATOR')}
-              className={`px-4 py-1.5 rounded-xl transition-all ${activeTab === 'CREATOR' ? 'bg-indigo-600 text-white shadow-sm font-black' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+              className={`px-4 py-1.5 rounded-full transition-all duration-200 ${
+                activeTab === 'CREATOR'
+                  ? 'bg-[#e1002d] text-white shadow-sm font-semibold'
+                  : 'text-[#606060] dark:text-[#aaaaaa] hover:text-[#0f0f0f] dark:hover:text-white'
+              }`}
             >
               Creator Intelligence
             </button>
@@ -79,22 +87,23 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           {onEditGoal && (
             <button
               onClick={onEditGoal}
-              className="py-2.5 px-4 rounded-2xl border border-teal-500/30 bg-teal-500/10 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 transition-all text-xs font-bold flex items-center gap-2 shadow-sm"
+              className="h-10 px-4 rounded-full border border-[#dbdbdb] dark:border-[#3f3f3f] bg-[#f5f5f5] dark:bg-[#272727] text-[#0f0f0f] dark:text-[#f1f1f1] hover:bg-[#eeeeee] dark:hover:bg-[#383838] transition-all text-xs font-medium flex items-center gap-2 shadow-yt-sm"
             >
-              <Target className="w-3.5 h-3.5" />
-              Edit Goal
+              <Target className="w-3.5 h-3.5 text-[#e1002d]" />
+              <span>Edit Goal</span>
             </button>
           )}
 
           <button
             onClick={onReset}
-            className="py-2.5 px-4 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-all text-xs font-semibold flex items-center gap-2 shadow-sm"
+            className="h-10 px-4 rounded-full border border-[#dbdbdb] dark:border-[#3f3f3f] bg-[#f5f5f5] dark:bg-[#272727] text-[#0f0f0f] dark:text-[#f1f1f1] hover:bg-[#eeeeee] dark:hover:bg-[#383838] transition-all text-xs font-medium flex items-center gap-2 shadow-yt-sm"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            New Upload
+            <RefreshCw className="w-3.5 h-3.5 text-[#606060] dark:text-[#aaaaaa]" />
+            <span>New Upload</span>
           </button>
         </div>
       </div>
+
 
       {activeTab === 'CREATOR' ? (
         <div className="space-y-6">
@@ -174,7 +183,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       <ChannelRecommendations
         recommendations={analytics.recommendations}
         goalText={goalText}
+        focusPlaylistUrl={analytics.focus_playlist_url}
       />
+
         </>
       )}
     </div>

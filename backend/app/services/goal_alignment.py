@@ -153,17 +153,21 @@ class GoalAlignmentEngine:
         ).order_by(RawRecord.timestamp.desc()).limit(2500).all()
 
         if not video_records:
-            score_orm = GoalAlignmentScore(
-                job_id=job_id,
-                alignment_probability_score=0.0,
-                focus_ratio_weight=0.30,
-                completion_weight=0.50,
-                session_density_penalty=0.10,
-                circadian_penalty=0.10
-            )
-            db.merge(score_orm)
-            db.commit()
+            score_orm = db.query(GoalAlignmentScore).filter(GoalAlignmentScore.job_id == job_id).first()
+            if not score_orm:
+                score_orm = GoalAlignmentScore(job_id=job_id)
+                db.add(score_orm)
+            score_orm.alignment_probability_score = 0.0
+            score_orm.focus_ratio_weight = 0.30
+            score_orm.completion_weight = 0.50
+            score_orm.session_density_penalty = 0.10
+            score_orm.circadian_penalty = 0.10
+            try:
+                db.commit()
+            except Exception:
+                db.rollback()
             return score_orm, []
+
 
         video_ids = list(set([rec.video_id for rec in video_records if rec.video_id]))
         enriched_videos = db.query(EnrichedVideo).filter(EnrichedVideo.video_id.in_(video_ids)).all() if video_ids else []
@@ -235,6 +239,7 @@ class GoalAlignmentEngine:
         score_orm = db.query(GoalAlignmentScore).filter(GoalAlignmentScore.job_id == job_id).first()
         if not score_orm:
             score_orm = GoalAlignmentScore(job_id=job_id)
+            db.add(score_orm)
 
         score_orm.alignment_probability_score = round(final_score, 1)
         score_orm.focus_ratio_weight = 0.40
@@ -242,8 +247,11 @@ class GoalAlignmentEngine:
         score_orm.session_density_penalty = round(density_penalty, 2)
         score_orm.circadian_penalty = round(circadian_penalty, 2)
 
-        db.merge(score_orm)
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+
 
         recommendations = []
         # Build channel-to-video similarity aggregation

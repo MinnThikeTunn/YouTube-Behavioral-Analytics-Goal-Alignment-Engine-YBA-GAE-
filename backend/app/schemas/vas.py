@@ -127,3 +127,65 @@ class ClosedLoopTelemetryResultDTO(BaseModel):
     message: str
 
 
+# ── Pre-Publish Multi-Variant A/B Packaging Matrix DTOs ────
+
+
+class ABPackagingVariantDTO(BaseModel):
+    variant_id: str
+    variant_label: str            # e.g. "Variant A (How-To Focus)"
+    title: str
+    hook_script: str
+    thumbnail_brightness: Optional[float] = 0.6
+    thumbnail_contrast: Optional[float] = 0.7
+
+
+class ABPackagingRequestDTO(BaseModel):
+    variants: List[ABPackagingVariantDTO]
+
+
+class ABPackagingResultDTO(BaseModel):
+    variant_id: str
+    variant_label: str
+    title: str
+    overall_vas: float
+    title_score: float
+    thumbnail_score: float
+    hook_score: float
+    is_winner: bool
+    predicted_ctr_uplift_pct: float
+    key_advantage: str
+    recommendations: List[str] = []
+
+
+class ABPackagingMatrixResponseDTO(BaseModel):
+    winning_variant_id: str
+    best_overall_vas: float
+    variants: List[ABPackagingResultDTO]
+    comparison_summary: str
+
+
+# ── AI Hook Script Retention Generator DTOs ────
+
+
+class HookGenerationRequestDTO(BaseModel):
+    title: str
+    topic: Optional[str] = None
+    target_audience: Optional[str] = None
+
+
+class HookScriptOptionDTO(BaseModel):
+    hook_style: str               # "Curiosity Gap" | "Pain Point / Mistake" | "Story Hook"
+    script_text: str
+    word_count: int = 0
+    estimated_retention_pct: float
+    pacing_notes: str
+
+
+
+
+class HookGenerationResponseDTO(BaseModel):
+    title: str
+    hooks: List[HookScriptOptionDTO]
+
+
+

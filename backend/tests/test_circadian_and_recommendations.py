@@ -15,13 +15,10 @@ def test_circadian_score_local_time():
     job = Job(id=job_id, goal_text="Software Engineering")
     db.add(job)
 
-    # 12:41 AM (00:41) local time corresponds to current time
-    now_utc = datetime.now(timezone.utc)
-    now_local = now_utc.astimezone()
-    
+    # 1:30 AM late night viewing event
     rec = RawRecord(
         job_id=job_id,
-        timestamp=now_utc.replace(tzinfo=None), # Stored as naive UTC in DB
+        timestamp=datetime(2026, 8, 25, 1, 30, 0),
         raw_title="Python Async Tutorial",
         record_type=RecordType.VIDEO
     )
@@ -30,12 +27,10 @@ def test_circadian_score_local_time():
 
     # Calculate circadian score
     score = ProxyMetricsEngine.calculate_circadian_score([rec])
-    
-    # If the local time hour is between 23 and 5, score should be 100%
-    if now_local.hour >= 23 or now_local.hour < 5:
-        assert score == 100.0, f"Expected 100.0 for local hour {now_local.hour}, got {score}"
+    assert score == 100.0, f"Expected 100.0 for late night 1:30 AM viewing, got {score}"
 
     db.close()
+
 
 def test_recommendations_auto_generation():
     Base.metadata.drop_all(bind=engine)

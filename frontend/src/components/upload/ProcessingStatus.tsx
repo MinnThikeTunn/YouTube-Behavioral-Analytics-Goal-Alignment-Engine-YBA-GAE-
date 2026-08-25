@@ -35,7 +35,6 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ jobId, onPro
             non_viewing_records: 0,
             error_message: undefined,
             completed_at: new Date().toISOString(),
-
             logs: []
           };
           setJobStatus(mockStatus);
@@ -75,9 +74,9 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ jobId, onPro
 
   if (!jobStatus) {
     return (
-      <Card className="max-w-3xl mx-auto my-12 text-center p-8">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-500 mx-auto mb-3" />
-        <p className="text-sm font-medium text-slate-600 dark:text-zinc-400">Connecting to processing engine...</p>
+      <Card className="max-w-3xl mx-auto my-12 text-center p-8 rounded-2xl border border-[#dbdbdb] dark:border-[#272727] bg-white dark:bg-[#1f1f1f] shadow-yt-sm">
+        <Loader2 className="w-8 h-8 animate-spin text-[#e1002d] mx-auto mb-3" />
+        <p className="text-xs font-medium text-[#606060] dark:text-[#aaaaaa]">Connecting to processing engine...</p>
       </Card>
     );
   }
@@ -107,35 +106,35 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ jobId, onPro
   return (
     <div className="max-w-4xl mx-auto my-8 space-y-6">
       {/* Main Status Header Card */}
-      <Card className="p-8">
+      <Card className="p-6 lg:p-8 rounded-2xl border border-[#dbdbdb] dark:border-[#272727] bg-white dark:bg-[#1f1f1f] shadow-yt-sm hover:shadow-yt-md">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="font-black text-2xl text-slate-900 dark:text-white mb-1 flex items-center gap-3">
+            <h3 className="font-headline text-2xl font-bold text-[#0f0f0f] dark:text-white mb-1 flex items-center gap-3">
               {isPaused ? (
                 <>
-                  <PauseCircle className="w-6 h-6 text-amber-500 animate-pulse" />
+                  <PauseCircle className="w-6 h-6 text-[#e1002d] animate-pulse" />
                   API Quota Limit Reached
                 </>
               ) : (
                 <>
-                  <Loader2 className="w-6 h-6 animate-spin text-teal-500" />
+                  <Loader2 className="w-6 h-6 animate-spin text-[#e1002d]" />
                   Live Processing & Calculations
                 </>
               )}
             </h3>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono">
-              Job ID: <code className="text-teal-600 dark:text-teal-400 font-bold">{jobId}</code>
+            <p className="text-xs text-[#606060] dark:text-[#aaaaaa] font-mono">
+              Job ID: <code className="text-[#e1002d] font-bold">{jobId}</code>
             </p>
           </div>
-          <span className="text-base font-black px-4 py-1.5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 shadow-sm">
+          <span className="text-sm font-bold px-3.5 py-1 rounded-full bg-[#ffcccc]/40 text-[#8b0000] dark:bg-[#e1002d]/20 dark:text-[#ff9999] border border-[#e1002d]/20 shadow-sm">
             {jobStatus.progress_pct.toFixed(0)}%
           </span>
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full h-3.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mb-8 p-0.5 border border-slate-200/50 dark:border-zinc-800">
+        <div className="w-full h-2.5 bg-[#eeeeee] dark:bg-[#383838] rounded-full overflow-hidden mb-8">
           <div
-            className="h-full bg-gradient-to-r from-teal-500 via-emerald-400 to-teal-300 transition-all duration-500 rounded-full shadow-inner"
+            className="h-full bg-[#e1002d] transition-all duration-500 rounded-full"
             style={{ width: `${Math.max(4, jobStatus.progress_pct)}%` }}
           />
         </div>
@@ -148,19 +147,19 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ jobId, onPro
             return (
               <div
                 key={idx}
-                className={`p-3.5 rounded-2xl border transition-all duration-300 flex items-center gap-3 ${
+                className={`p-3.5 rounded-xl border transition-all duration-300 flex items-center gap-3 ${
                   status === 'completed'
-                    ? 'bg-teal-500/10 border-teal-500/30 text-teal-700 dark:text-teal-300'
+                    ? 'bg-[#c8e6c9]/40 border-[#2ba640]/30 text-[#1b5e20] dark:text-[#a5d6a7]'
                     : status === 'active'
-                    ? 'bg-white dark:bg-zinc-900 border-teal-500 text-teal-600 dark:text-teal-400 shadow-md ring-2 ring-teal-500/20 animate-pulse'
-                    : 'bg-slate-50 dark:bg-zinc-900/40 border-slate-200/60 dark:border-zinc-800/60 text-slate-400 dark:text-zinc-600'
+                    ? 'bg-white dark:bg-[#272727] border-[#e1002d] text-[#8b0000] dark:text-[#ff9999] shadow-sm ring-1 ring-[#e1002d]/30'
+                    : 'bg-[#f9f9f9] dark:bg-[#272727] border-[#dbdbdb] dark:border-[#2e2e2e] text-[#606060] dark:text-[#aaaaaa]'
                 }`}
               >
-                <div className={`p-2 rounded-xl ${status === 'completed' ? 'bg-teal-500 text-white' : status === 'active' ? 'bg-teal-500/20 text-teal-500' : 'bg-slate-200/50 dark:bg-zinc-800 text-slate-400'}`}>
+                <div className={`p-2 rounded-full ${status === 'completed' ? 'bg-[#2ba640] text-white' : status === 'active' ? 'bg-[#ffcccc]/50 dark:bg-[#e1002d]/20 text-[#e1002d]' : 'bg-[#eeeeee] dark:bg-[#383838] text-[#606060]'}`}>
                   {status === 'completed' ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                 </div>
                 <div className="overflow-hidden">
-                  <p className="text-xs font-bold truncate">{st.label}</p>
+                  <p className="text-xs font-semibold truncate">{st.label}</p>
                   <p className="text-[10px] opacity-75 font-mono capitalize">{status}</p>
                 </div>
               </div>
@@ -169,32 +168,32 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ jobId, onPro
         </div>
 
         {isPaused && (
-          <div className="mt-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs">
+          <div className="mt-6 p-4 rounded-xl bg-[#ffcccc]/40 border border-[#e1002d]/30 text-[#8b0000] dark:bg-[#8b0000]/20 dark:text-[#ff9999] text-xs font-medium">
             Daily YouTube API quota reached. Partial analytics computed up to this point remain available while waiting for daily reset.
           </div>
         )}
 
         {error && (
-          <div className="mt-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs">
+          <div className="mt-6 p-4 rounded-xl bg-[#ffcccc]/40 border border-[#e1002d]/30 text-[#8b0000] dark:bg-[#8b0000]/20 dark:text-[#ff9999] text-xs font-medium">
             {error}
           </div>
         )}
       </Card>
 
       {/* Interactive Live Terminal & Calculation Trace Console */}
-      <Card className="p-6 overflow-hidden">
+      <Card className="p-6 overflow-hidden rounded-2xl border border-[#dbdbdb] dark:border-[#272727] bg-white dark:bg-[#1f1f1f] shadow-yt-sm hover:shadow-yt-md">
         {/* Terminal Header Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-zinc-800/80 mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-slate-900 dark:bg-zinc-800 flex items-center justify-center text-teal-400">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#dbdbdb] dark:border-[#2e2e2e] mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-[#eeeeee] dark:bg-[#272727] flex items-center justify-center text-[#e1002d] border border-[#dbdbdb] dark:border-[#3f3f3f]">
               <Terminal className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="font-black text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <h4 className="font-headline text-sm font-bold text-[#0f0f0f] dark:text-white flex items-center gap-2">
                 Execution & Calculation Traces
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                <span className="w-2 h-2 rounded-full bg-[#2ba640] animate-ping" />
               </h4>
-              <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+              <p className="text-[11px] text-[#606060] dark:text-[#aaaaaa]">
                 Showing {filteredLogs.length} live trace logs. Click calculation entries for details.
               </p>
             </div>
@@ -202,23 +201,23 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ jobId, onPro
 
           {/* Filter Tabs & AutoScroll Toggle */}
           <div className="flex items-center gap-2">
-            <div className="flex p-1 bg-slate-100 dark:bg-zinc-900 rounded-xl border border-slate-200/50 dark:border-zinc-800 text-xs font-bold">
+            <div className="flex p-1 bg-[#f5f5f5] dark:bg-[#272727] rounded-full border border-[#dbdbdb] dark:border-[#3f3f3f] text-xs font-medium">
               <button
                 onClick={() => setActiveFilter('ALL')}
-                className={`px-3 py-1 rounded-lg transition-all ${activeFilter === 'ALL' ? 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-zinc-400'}`}
+                className={`px-3 py-1 rounded-full transition-all ${activeFilter === 'ALL' ? 'bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f] font-semibold shadow-sm' : 'text-[#606060] dark:text-[#aaaaaa]'}`}
               >
                 All
               </button>
               <button
                 onClick={() => setActiveFilter('CALCULATION')}
-                className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1 ${activeFilter === 'CALCULATION' ? 'bg-teal-500 text-white shadow-sm' : 'text-slate-500 dark:text-zinc-400'}`}
+                className={`px-3 py-1 rounded-full transition-all flex items-center gap-1 ${activeFilter === 'CALCULATION' ? 'bg-[#e1002d] text-white font-semibold shadow-sm' : 'text-[#606060] dark:text-[#aaaaaa]'}`}
               >
                 <Calculator className="w-3 h-3" />
                 Math
               </button>
               <button
                 onClick={() => setActiveFilter('SYSTEM')}
-                className={`px-3 py-1 rounded-lg transition-all ${activeFilter === 'SYSTEM' ? 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-zinc-400'}`}
+                className={`px-3 py-1 rounded-full transition-all ${activeFilter === 'SYSTEM' ? 'bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f] font-semibold shadow-sm' : 'text-[#606060] dark:text-[#aaaaaa]'}`}
               >
                 System
               </button>
@@ -226,7 +225,7 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ jobId, onPro
 
             <button
               onClick={() => setAutoScroll(!autoScroll)}
-              className={`p-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1 ${autoScroll ? 'bg-teal-500/10 border-teal-500/30 text-teal-600 dark:text-teal-400' : 'bg-slate-100 dark:bg-zinc-800 text-slate-500'}`}
+              className={`p-2 rounded-full text-xs font-medium border border-[#dbdbdb] dark:border-[#3f3f3f] transition-all flex items-center gap-1 ${autoScroll ? 'bg-[#ffcccc]/40 text-[#8b0000] dark:bg-[#e1002d]/20 dark:text-[#ff9999]' : 'bg-[#f5f5f5] dark:bg-[#272727] text-[#606060]'}`}
               title="Toggle Auto-Scroll"
             >
               <ArrowDown className={`w-3.5 h-3.5 ${autoScroll ? 'animate-bounce' : ''}`} />
@@ -235,9 +234,9 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ jobId, onPro
         </div>
 
         {/* Log Terminal Screen */}
-        <div className="h-72 overflow-y-auto font-mono text-xs space-y-2 p-4 rounded-2xl bg-slate-950 text-slate-200 border border-slate-800 shadow-inner scrollbar-thin scrollbar-thumb-slate-800">
+        <div className="h-72 overflow-y-auto font-mono text-xs space-y-2 p-4 rounded-xl bg-[#0f0f0f] text-[#f1f1f1] border border-[#272727] shadow-inner custom-scrollbar">
           {filteredLogs.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-slate-600">
+            <div className="h-full flex items-center justify-center text-[#606060]">
               <p>Waiting for engine calculation events...</p>
             </div>
           ) : (
@@ -250,32 +249,32 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ jobId, onPro
                 <div
                   key={log.id}
                   onClick={() => log.details_json && setSelectedLog(log)}
-                  className={`group p-2.5 rounded-xl transition-all border flex items-start justify-between gap-3 ${
-                    log.details_json ? 'cursor-pointer hover:bg-slate-900/90' : ''
+                  className={`group p-2.5 rounded-lg transition-all border flex items-start justify-between gap-3 ${
+                    log.details_json ? 'cursor-pointer hover:bg-[#1f1f1f]' : ''
                   } ${
                     isCalc
-                      ? 'bg-purple-950/20 border-purple-900/40 text-purple-200 hover:border-purple-500/50'
+                      ? 'bg-[#01579b]/20 border-[#3ea6ff]/30 text-[#b3e5fc] hover:border-[#3ea6ff]/60'
                       : isSuccess
-                      ? 'bg-emerald-950/20 border-emerald-900/40 text-emerald-300'
+                      ? 'bg-[#1b5e20]/20 border-[#2ba640]/30 text-[#c8e6c9]'
                       : isWarning
-                      ? 'bg-amber-950/20 border-amber-900/40 text-amber-300'
-                      : 'bg-slate-900/40 border-slate-900/60 text-slate-300'
+                      ? 'bg-[#8b0000]/20 border-[#e1002d]/30 text-[#ffcccc]'
+                      : 'bg-[#1f1f1f]/50 border-white/5 text-[#aaaaaa]'
                   }`}
                 >
                   <div className="flex items-start gap-2.5 overflow-hidden">
-                    <span className="text-[10px] text-slate-500 shrink-0 pt-0.5 font-bold">
+                    <span className="text-[10px] text-[#606060] shrink-0 pt-0.5 font-medium">
                       {new Date(log.timestamp).toLocaleTimeString()}
                     </span>
 
                     <span
-                      className={`px-2 py-0.5 text-[9px] font-black rounded-md uppercase shrink-0 ${
+                      className={`px-2 py-0.5 text-[9px] font-semibold rounded-full uppercase shrink-0 ${
                         isCalc
-                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                          ? 'bg-[#b3e5fc]/30 text-[#3ea6ff] border border-[#3ea6ff]/30'
                           : isSuccess
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          ? 'bg-[#c8e6c9]/30 text-[#2ba640] border border-[#2ba640]/30'
                           : isWarning
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                          : 'bg-slate-800 text-slate-400'
+                          ? 'bg-[#ffcccc]/30 text-[#e1002d] border border-[#e1002d]/30'
+                          : 'bg-[#272727] text-[#888888]'
                       }`}
                     >
                       {log.stage}
@@ -285,7 +284,7 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ jobId, onPro
                   </div>
 
                   {log.details_json && (
-                    <span className="shrink-0 text-[10px] font-bold text-teal-400 group-hover:text-teal-300 flex items-center gap-0.5 pt-0.5">
+                    <span className="shrink-0 text-[10px] font-medium text-[#3ea6ff] group-hover:text-white flex items-center gap-0.5 pt-0.5">
                       Details
                       <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                     </span>
@@ -303,3 +302,6 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ jobId, onPro
     </div>
   );
 };
+
+export default ProcessingStatus;
+

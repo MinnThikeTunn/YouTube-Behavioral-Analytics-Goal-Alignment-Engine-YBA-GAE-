@@ -25,18 +25,18 @@ export const TopicBreakdownChart: React.FC<TopicBreakdownChartProps> = ({ catego
   const totalClicks = categories.reduce((sum, item) => sum + item.count, 0);
 
   return (
-    <Card className="p-8 flex flex-col justify-between">
+    <Card className="p-8 rounded-2xl border border-[#dbdbdb] dark:border-[#272727] bg-white dark:bg-[#1f1f1f] shadow-yt-sm hover:shadow-yt-md flex flex-col justify-between">
       <div>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <PieIcon className="w-5 h-5 text-indigo-500" />
-            <h3 className="font-black text-xl text-slate-900 dark:text-white">
+            <PieIcon className="w-5 h-5 text-[#e1002d]" />
+            <h3 className="font-headline text-xl font-bold text-[#0f0f0f] dark:text-white">
               Content Categorization Breakdown
             </h3>
           </div>
           <MetricBadge type="estimated" />
         </div>
-        <p className="text-xs text-slate-500 dark:text-zinc-400 mb-6">
+        <p className="text-xs text-[#606060] dark:text-[#aaaaaa] mb-6">
           Viewing distribution grouped by canonical topic categories across {totalClicks} total video clicks.
         </p>
 
@@ -61,12 +61,12 @@ export const TopicBreakdownChart: React.FC<TopicBreakdownChartProps> = ({ catego
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1c1d1f',
-                    borderColor: '#2e3034',
-                    borderRadius: '16px',
+                    backgroundColor: '#1f1f1f',
+                    borderColor: '#3f3f3f',
+                    borderRadius: '12px',
                     color: '#fff',
                     fontSize: '12px',
-                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
                   }}
                   formatter={(value: number, name: string) => [`${value} clicks`, name]}
                 />
@@ -74,23 +74,23 @@ export const TopicBreakdownChart: React.FC<TopicBreakdownChartProps> = ({ catego
             </ResponsiveContainer>
           </div>
 
-          <div className="md:col-span-6 space-y-2 max-h-56 overflow-y-auto pr-1">
+          <div className="md:col-span-6 space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
             {categories.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-100 dark:border-zinc-800/80">
+              <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-[#f9f9f9] dark:bg-[#272727] border border-[#dbdbdb] dark:border-[#2e2e2e]">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span
-                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200 truncate">
+                  <span className="text-xs font-medium text-[#0f0f0f] dark:text-[#f1f1f1] truncate">
                     {item.category_name}
                   </span>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                <div className="flex items-center gap-2.5 flex-shrink-0">
+                  <span className="text-xs font-semibold text-[#0f0f0f] dark:text-white">
                     {item.percentage.toFixed(1)}%
                   </span>
-                  <span className="text-[10px] text-slate-400 dark:text-zinc-500">
+                  <span className="text-[10px] text-[#606060] dark:text-[#aaaaaa]">
                     ({item.count})
                   </span>
                 </div>
@@ -102,3 +102,6 @@ export const TopicBreakdownChart: React.FC<TopicBreakdownChartProps> = ({ catego
     </Card>
   );
 };
+
+export default TopicBreakdownChart;
+

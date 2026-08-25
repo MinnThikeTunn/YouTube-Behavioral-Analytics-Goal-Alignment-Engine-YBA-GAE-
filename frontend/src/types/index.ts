@@ -86,7 +86,9 @@ export interface AnalyticsResultDTO {
   categories?: TopicCategoryBreakdownDTO[];
   hourly_heatmap?: HourlyAlignmentDTO[];
   nudges?: BehavioralNudgeDTO[];
+  focus_playlist_url?: string;
 }
+
 
 export interface SessionVelocityDTO {
   session_id: string;
@@ -269,5 +271,59 @@ export interface ClosedLoopTelemetryResultDTO {
   weight_delta_w3: number;
   message: string;
 }
+
+export interface ABPackagingVariantDTO {
+  variant_id: string;
+  variant_label: string; // e.g. "Variant A (How-To Focus)"
+  title: string;
+  hook_script: string;
+  thumbnail_brightness?: number;
+  thumbnail_contrast?: number;
+}
+
+export interface ABPackagingRequestDTO {
+  variants: ABPackagingVariantDTO[];
+}
+
+export interface ABPackagingResultDTO {
+  variant_id: string;
+  variant_label: string;
+  title: string;
+  overall_vas: number;
+  title_score: number;
+  thumbnail_score: number;
+  hook_score: number;
+  is_winner: boolean;
+  predicted_ctr_uplift_pct: number;
+  key_advantage: string;
+  recommendations: string[];
+}
+
+export interface ABPackagingMatrixResponseDTO {
+  winning_variant_id: string;
+  best_overall_vas: number;
+  variants: ABPackagingResultDTO[];
+  comparison_summary: string;
+}
+
+export interface HookGenerationRequestDTO {
+  title: string;
+  topic?: string;
+  target_audience?: string;
+}
+
+export interface HookScriptOptionDTO {
+  hook_style: string; // "Curiosity Gap" | "Pain Point / Mistake" | "Story Hook"
+  script_text: string;
+  word_count: number;
+  estimated_retention_pct: number;
+  pacing_notes: string;
+}
+
+export interface HookGenerationResponseDTO {
+  title: string;
+  hooks: HookScriptOptionDTO[];
+}
+
 
 

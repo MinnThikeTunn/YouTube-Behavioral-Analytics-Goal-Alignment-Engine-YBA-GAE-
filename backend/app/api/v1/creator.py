@@ -10,7 +10,8 @@ from app.schemas.trend import NicheTrendRadarResponseDTO
 from app.schemas.opportunity import ContentGapMatrixResponseDTO
 from app.schemas.vas import (
     VASEvalRequestDTO, VASEvalResponseDTO, DetailedVASAnalysisDTO, ClosedLoopResponseDTO,
-    ThumbnailVisionResultDTO, Composite8FactorScoreDTO, ClosedLoopSyncRequestDTO, ClosedLoopTelemetryResultDTO
+    ThumbnailVisionResultDTO, Composite8FactorScoreDTO, ClosedLoopSyncRequestDTO, ClosedLoopTelemetryResultDTO,
+    ABPackagingRequestDTO, ABPackagingMatrixResponseDTO, HookGenerationRequestDTO, HookGenerationResponseDTO
 )
 from app.services.comment_miner import CommentMinerService
 from app.services.trend_radar import TrendRadarEngine
@@ -19,6 +20,19 @@ from app.services.packaging_optimizer import PackagingOptimizerService
 from app.db.models import MinedComment
 
 router = APIRouter()
+
+
+@router.post("/packaging/ab-matrix", response_model=ABPackagingMatrixResponseDTO)
+def evaluate_ab_packaging(request: ABPackagingRequestDTO, db: Session = Depends(get_db)):
+    """Evaluate up to 3 title/thumbnail packaging variants side-by-side."""
+    return PackagingOptimizerService.evaluate_ab_packaging(request, db)
+
+
+@router.post("/packaging/generate-hooks", response_model=HookGenerationResponseDTO)
+def generate_hook_scripts(request: HookGenerationRequestDTO):
+    """Generate 3 high-retention 30s opening hook script options (60-90 words)."""
+    return PackagingOptimizerService.generate_hook_scripts(request)
+
 
 
 @router.post("/thumbnail-analyze", response_model=ThumbnailVisionResultDTO)

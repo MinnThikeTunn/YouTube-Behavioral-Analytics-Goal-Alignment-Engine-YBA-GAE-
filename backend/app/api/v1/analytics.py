@@ -68,10 +68,11 @@ def build_hourly_heatmap(db: Session, job_id: str, goal_text: str) -> List[Hourl
     hourly_records: Dict[int, List[str]] = {h: [] for h in range(24)}
     for rec in records:
         dt = rec.timestamp
-        local_h = dt.astimezone().hour if dt.tzinfo else dt.replace(tzinfo=timezone.utc).astimezone().hour
+        local_h = dt.hour if dt.tzinfo is None else dt.astimezone().hour
         title_clean = GoalAlignmentEngine.clean_title(rec.raw_title or "")
         if title_clean:
             hourly_records[local_h].append(title_clean)
+
 
     # Single batched vector similarity calculation across all titles in job
     all_clean_titles = [t for titles in hourly_records.values() for t in titles]
@@ -223,6 +224,24 @@ def get_analytics_results(job_id: str, db: Session = Depends(get_db)):
     hourly_heatmap_dto = build_hourly_heatmap(db, job.id, goal_text)
     nudges_dto = build_behavioral_nudges(db, job.id, metrics_dto, goal_text)
 
+    # 1-Click Goal-to-Playlist Focus Queue URL
+    playlist_video_ids = []
+    try:
+        top_aligned_records = db.query(RawRecord.video_id).filter(
+            RawRecord.job_id == job.id,
+            RawRecord.record_type == RecordType.VIDEO,
+            RawRecord.video_id.isnot(None)
+        ).order_by(RawRecord.timestamp.desc()).limit(15).all()
+        playlist_video_ids = [r[0] for r in top_aligned_records if r[0]]
+    except Exception:
+        pass
+
+    if not playlist_video_ids:
+        # High quality educational default fallback queue
+        playlist_video_ids = ["eIrMbAQSU34", "8jLOx1hD3_o", "rfscVS0vtbw", "Z1Yd7upQsXY", "HGOBQPFzWKo"]
+
+    focus_playlist_url = f"https://www.youtube.com/watch_videos?video_ids={','.join(playlist_video_ids[:10])}"
+
     return AnalyticsResultDTO(
         job_id=job.id,
         goal_text=goal_text,
@@ -231,8 +250,10 @@ def get_analytics_results(job_id: str, db: Session = Depends(get_db)):
         recommendations=recommendations_dto,
         categories=categories_dto,
         hourly_heatmap=hourly_heatmap_dto,
-        nudges=nudges_dto
+        nudges=nudges_dto,
+        focus_playlist_url=focus_playlist_url
     )
+
 
 @router.get("/analytics/{job_id}/velocity", response_model=VelocityAnalyticsResponseDTO)
 def get_velocity_analytics(job_id: str, db: Session = Depends(get_db)):

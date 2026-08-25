@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
@@ -14,6 +14,8 @@ class CommentMiningRequestDTO(BaseModel):
     max_results: int = 100
 
 class MinedCommentDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     comment_id: str
     author_name: Optional[str] = None
     text_display: str
@@ -21,9 +23,7 @@ class MinedCommentDTO(BaseModel):
     published_at: Optional[datetime] = None
     intent_label: Optional[CommentIntentEnum] = None
     sentiment_score: Optional[float] = None
-    
-    class Config:
-        from_attributes = True
+
 
 class CommentMiningResponseDTO(BaseModel):
     video_id: str
