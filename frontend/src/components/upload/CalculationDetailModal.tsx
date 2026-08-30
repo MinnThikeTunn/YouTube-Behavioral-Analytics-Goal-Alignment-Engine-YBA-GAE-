@@ -22,59 +22,59 @@ export const CalculationDetailModal: React.FC<CalculationDetailModalProps> = ({ 
   const getStageBadge = (stage: string) => {
     switch (stage) {
       case 'INGESTION':
-        return { label: 'Data Ingestion', color: 'text-blue-500 bg-blue-500/10 border-blue-500/20' };
+        return { label: 'Data Ingestion', color: 'bg-[#b3e5fc] text-[#01579b] dark:bg-[#01579b]/60 dark:text-[#81d4fa] border-[#3ea6ff]/30' };
       case 'ENRICHMENT':
-        return { label: 'YouTube API Enrichment', color: 'text-amber-500 bg-amber-500/10 border-amber-500/20' };
+        return { label: 'YouTube API Enrichment', color: 'bg-[#ffcccc]/60 text-[#8b0000] dark:bg-[#8b0000]/40 dark:text-[#ff9999] border-[#e1002d]/30' };
       case 'METRICS':
-        return { label: 'Proxy Metrics Math', color: 'text-purple-500 bg-purple-500/10 border-purple-500/20' };
+        return { label: 'Proxy Metrics Math', color: 'bg-[#b3e5fc]/80 text-[#01579b] dark:bg-[#01579b]/60 dark:text-[#81d4fa] border-[#3ea6ff]/30' };
       case 'AI_DISCOVERY':
-        return { label: 'Gemini 3.5 Flash Lite', color: 'text-teal-500 bg-teal-500/10 border-teal-500/20' };
+        return { label: 'Gemini AI Alignment', color: 'bg-[#c8e6c9] text-[#1b5e20] dark:bg-[#1b5e20]/60 dark:text-[#a5d6a7] border-[#2ba640]/30' };
       default:
-        return { label: stage, color: 'text-slate-500 bg-slate-500/10 border-slate-500/20' };
+        return { label: stage, color: 'bg-[#eeeeee] text-[#606060] dark:bg-[#383838] dark:text-[#aaaaaa] border-[#dbdbdb] dark:border-[#3f3f3f]' };
     }
   };
 
   const badge = getStageBadge(log.stage);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-xl bg-white dark:bg-[#18191b] border border-slate-200 dark:border-zinc-800 rounded-[32px] p-6 lg:p-8 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+      <div className="relative w-full max-w-xl bg-white dark:bg-[#1f1f1f] border border-[#dbdbdb] dark:border-[#272727] rounded-2xl p-6 lg:p-8 shadow-yt-lg overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-zinc-800/80 mb-5">
+        <div className="flex items-center justify-between pb-4 border-b border-[#dbdbdb] dark:border-[#2e2e2e] mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400">
+            <div className="w-10 h-10 rounded-full bg-[#ffcccc]/50 dark:bg-[#e1002d]/20 border border-[#e1002d]/20 flex items-center justify-center text-[#e1002d]">
               <Calculator className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="font-black text-lg text-slate-900 dark:text-white">Calculation Breakdown</h4>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">
+              <h4 className="font-headline text-lg font-bold text-[#0f0f0f] dark:text-white">Calculation Breakdown</h4>
+              <p className="text-xs text-[#606060] dark:text-[#aaaaaa]">
                 {new Date(log.timestamp).toLocaleTimeString()}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#606060] dark:text-[#aaaaaa] hover:text-[#0f0f0f] dark:hover:text-white hover:bg-[#eeeeee] dark:hover:bg-[#383838] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="space-y-4 text-sm">
+        <div className="space-y-4 text-xs">
           {/* Stage & Level Pills */}
           <div className="flex items-center gap-2">
-            <span className={`px-3 py-1 text-xs font-bold rounded-full border ${badge.color}`}>
+            <span className={`px-3 py-0.5 text-xs font-semibold rounded-full border ${badge.color}`}>
               {badge.label}
             </span>
-            <span className="px-3 py-1 text-xs font-mono font-bold rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300">
+            <span className="px-3 py-0.5 text-xs font-mono font-semibold rounded-full bg-[#eeeeee] dark:bg-[#383838] text-[#606060] dark:text-[#aaaaaa] border border-[#dbdbdb] dark:border-[#3f3f3f]">
               LEVEL: {log.level}
             </span>
           </div>
 
           {/* Log Message */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/80 border border-slate-100 dark:border-zinc-800">
-            <p className="font-medium text-slate-800 dark:text-zinc-200 leading-relaxed">
+          <div className="p-4 rounded-xl bg-[#f9f9f9] dark:bg-[#272727] border border-[#dbdbdb] dark:border-[#2e2e2e]">
+            <p className="font-medium text-[#0f0f0f] dark:text-[#f1f1f1] leading-relaxed">
               {log.message}
             </p>
           </div>
@@ -82,11 +82,11 @@ export const CalculationDetailModal: React.FC<CalculationDetailModalProps> = ({ 
           {/* Parsed JSON Math Payload */}
           {parsedDetails && (
             <div>
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-zinc-400 mb-2">
-                <Code2 className="w-4 h-4 text-teal-500" />
-                Raw Variables & Math Parameters
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#606060] dark:text-[#aaaaaa] mb-2">
+                <Code2 className="w-4 h-4 text-[#e1002d]" />
+                <span>Raw Variables & Math Parameters</span>
               </div>
-              <pre className="p-4 rounded-2xl bg-slate-900 text-teal-400 text-xs font-mono overflow-x-auto border border-slate-800 shadow-inner">
+              <pre className="p-4 rounded-xl bg-[#0f0f0f] text-[#3ea6ff] text-xs font-mono overflow-x-auto border border-[#272727] shadow-inner custom-scrollbar">
                 {JSON.stringify(parsedDetails, null, 2)}
               </pre>
             </div>
@@ -94,10 +94,10 @@ export const CalculationDetailModal: React.FC<CalculationDetailModalProps> = ({ 
         </div>
 
         {/* Footer */}
-        <div className="mt-6 pt-4 border-t border-slate-100 dark:border-zinc-800/80 flex justify-end">
+        <div className="mt-6 pt-4 border-t border-[#dbdbdb] dark:border-[#2e2e2e] flex justify-end">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white font-bold text-xs transition-all"
+            className="h-9 px-5 rounded-full bg-[#eeeeee] dark:bg-[#383838] hover:bg-[#e8e8e8] dark:hover:bg-[#484848] text-[#0f0f0f] dark:text-[#f1f1f1] font-medium text-xs transition-all"
           >
             Close Drill-Down
           </button>
@@ -106,3 +106,6 @@ export const CalculationDetailModal: React.FC<CalculationDetailModalProps> = ({ 
     </div>
   );
 };
+
+export default CalculationDetailModal;
+

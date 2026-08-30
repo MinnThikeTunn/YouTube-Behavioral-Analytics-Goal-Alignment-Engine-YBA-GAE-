@@ -1,6 +1,6 @@
 import numpy as np
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from app.db.models import RawRecord, RecordType, EnrichedVideo, ComputedMetric
@@ -106,11 +106,13 @@ class ProxyMetricsEngine:
 
         late_night_clicks = 0
         for rec in records:
-            hour = rec.timestamp.hour
+            dt = rec.timestamp
+            hour = dt.hour if dt.tzinfo is None else dt.astimezone().hour
             if hour >= 23 or hour < 5:
                 late_night_clicks += 1
 
         return (late_night_clicks / float(len(records))) * 100.0
+
 
     @classmethod
     def compute_job_metrics(cls, db: Session, job_id: str) -> ComputedMetric:

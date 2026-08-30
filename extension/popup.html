@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YBA Goal Alignment Engine</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="logo-icon">🎯</div>
+        <div>
+          <h1 class="title">YBA Engine</h1>
+          <p class="subtitle">Goal Alignment & Shield</p>
+        </div>
+      </div>
+      <div id="status-badge" class="badge active">
+        <span class="pulse"></span>
+        <span id="status-text">Active</span>
+      </div>
+    </header>
+
+    <!-- Pause/Resume Control Card -->
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <span class="card-label">EXTENSION STATUS</span>
+        <span id="pause-indicator" class="status-indicator running">Monitoring Live</span>
+      </div>
+      <button id="toggle-pause-btn" class="btn btn-primary btn-block">
+        <span id="btn-icon">⏸️</span>
+        <span id="toggle-pause-text">Pause Monitoring</span>
+      </button>
+    </div>
+
+    <!-- Active Target Goal Card -->
+    <div class="card highlight-card">
+      <div class="card-header">
+        <span class="card-label">CURRENT TARGET GOAL</span>
+      </div>
+      <div class="goal-preview-box">
+        <p id="current-goal-display" class="goal-text">Software Engineering, Programming, Machine Learning</p>
+      </div>
+
+      <div class="goal-quick-edit">
+        <input type="text" id="goal-input" placeholder="Type new goal..." class="goal-input" />
+        <button id="save-quick-goal-btn" class="btn btn-secondary">Save</button>
+      </div>
+
+      <div class="quick-presets">
+        <span class="preset-tag" data-goal="Software Engineering">Software Eng</span>
+        <span class="preset-tag" data-goal="Data Science & AI">Data Science</span>
+        <span class="preset-tag" data-goal="Health & Fitness">Health & Fitness</span>
+      </div>
+
+      <button id="open-dashboard-goal-btn" class="btn btn-outline btn-block mt-3">
+        ⚡ Open Dashboard Goal Editor
+      </button>
+    </div>
+
+    <!-- 1-Click History Backfill Card -->
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <span class="card-label">INSTANT ONBOARDING</span>
+      </div>
+      <button id="sync-history-btn" class="btn btn-secondary btn-block">
+        📥 1-Click Chrome History Sync (50 vids)
+      </button>
+      <p id="sync-history-status" style="font-size: 10px; color: #a1a1aa; margin-top: 6px; text-align: center; display: none;"></p>
+    </div>
+
+    <!-- Footer Links -->
+    <footer class="footer">
+      <button id="open-dashboard-btn" class="link-btn">Launch YBA Dashboard ➔</button>
+    </footer>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

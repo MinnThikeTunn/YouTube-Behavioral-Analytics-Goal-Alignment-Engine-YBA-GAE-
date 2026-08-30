@@ -4,10 +4,56 @@
 
 @layer base {
   body {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  }
+  
+  h1, h2, h3, .font-youtube {
+    font-family: 'YouTube Sans', 'Roboto', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
   }
 }
 
-.perplexity-card {
-  @apply rounded-[32px] border border-slate-200/80 dark:border-zinc-800/80 bg-white/70 dark:bg-[#1c1d1f]/80 backdrop-blur-md shadow-sm transition-all duration-200 hover:shadow-md;
+/* YouTube Design System Utility Classes */
+.yt-card {
+  @apply rounded-2xl border border-[#dbdbdb] dark:border-[#272727] bg-white dark:bg-[#1f1f1f] shadow-yt-sm transition-all duration-200 hover:shadow-yt-md;
 }
+
+.yt-btn-primary {
+  @apply inline-flex items-center justify-center gap-2 h-10 px-4 py-2 rounded-full bg-[#e1002d] text-white text-sm font-medium transition-colors duration-200 hover:bg-[#cc0026] active:bg-[#b30000] disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.yt-btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 h-10 px-4 py-2 rounded-full bg-[#eeeeee] dark:bg-[#272727] text-[#0f0f0f] dark:text-[#f1f1f1] border border-[#dbdbdb] dark:border-[#3f3f3f] text-sm font-medium transition-colors duration-200 hover:bg-[#e8e8e8] dark:hover:bg-[#383838] disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.yt-btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 h-10 px-4 py-2 rounded-full bg-transparent text-[#0f0f0f] dark:text-[#f1f1f1] text-sm font-medium transition-colors duration-200 hover:bg-[#eeeeee] dark:hover:bg-[#272727] disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.yt-chip {
+  @apply inline-flex items-center gap-1.5 h-8 px-3 py-1.5 rounded-full text-xs font-medium bg-[#eeeeee] dark:bg-[#272727] text-[#0f0f0f] dark:text-[#f1f1f1] border border-[#dbdbdb] dark:border-[#3f3f3f] transition-all duration-200 hover:bg-[#e8e8e8] dark:hover:bg-[#383838];
+}
+
+.yt-chip-selected {
+  @apply inline-flex items-center gap-1.5 h-8 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#e1002d] text-white border-transparent shadow-sm;
+}
+
+.yt-badge {
+  @apply inline-flex items-center gap-1 h-5 px-2 py-0.5 rounded-full text-[11px] font-medium;
+}
+
+/* Custom Smooth Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(150, 150, 150, 0.3);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(150, 150, 150, 0.5);
+}
+

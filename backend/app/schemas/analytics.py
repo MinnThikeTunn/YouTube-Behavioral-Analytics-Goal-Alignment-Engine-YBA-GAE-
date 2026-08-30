@@ -52,4 +52,6 @@ class AnalyticsResultDTO(BaseModel):
     categories: List[TopicCategoryBreakdownDTO] = []
     hourly_heatmap: List[HourlyAlignmentDTO] = []
     nudges: List[BehavioralNudgeDTO] = []
+    focus_playlist_url: Optional[str] = None
+
 

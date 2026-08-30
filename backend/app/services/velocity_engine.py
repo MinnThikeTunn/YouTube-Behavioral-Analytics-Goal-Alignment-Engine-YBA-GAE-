@@ -64,7 +64,9 @@ class VelocityEngine:
         duration_hrs = (end_time - start_time).total_seconds() / 3600.0
         
         video_count = len(records)
-        v_cog = video_count / duration_hrs if duration_hrs > 0.05 else float(video_count * 2)
+        effective_hrs = max(duration_hrs, 0.25)
+        raw_v_cog = video_count / effective_hrs
+        v_cog = min(120.0, raw_v_cog)
 
         fatigue_state = "STABLE"
         if v_cog > 15:

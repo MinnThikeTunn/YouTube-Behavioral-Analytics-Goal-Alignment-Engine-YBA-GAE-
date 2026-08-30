@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, Code, HeartPulse, Database, Key } from 'lucide-react';
+import { Target, Key } from 'lucide-react';
 
 interface GoalSelectorProps {
   selectedGoal: string;
@@ -7,13 +7,17 @@ interface GoalSelectorProps {
   customGoal: string;
   setCustomGoal: (val: string) => void;
   userApiKey: string;
-  setUserApiKey: (val: string) => void;
+  setUserApiKey: (key: string) => void;
 }
 
-const PREDEFINED_GOALS = [
-  { id: 'Software Engineering', label: 'Software Engineering', icon: Code },
-  { id: 'Data Science', label: 'Data Science & AI', icon: Database },
-  { id: 'Health & Fitness', label: 'Health & Fitness', icon: HeartPulse },
+const PRESET_GOALS = [
+  'Software Engineering',
+  'Data Science & AI',
+  'Fitness & Health',
+  'Business & Startups',
+  'Philosophy & Psychology',
+  'Language Learning',
+  'Custom',
 ];
 
 export const GoalSelector: React.FC<GoalSelectorProps> = ({
@@ -25,67 +29,67 @@ export const GoalSelector: React.FC<GoalSelectorProps> = ({
   setUserApiKey,
 }) => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <label className="block text-sm font-semibold text-slate-800 dark:text-zinc-200 mb-3 flex items-center gap-2">
-          <Target className="w-4 h-4 text-teal-500" />
-          Select Your Target Goal
+        <label className="block text-xs font-semibold text-[#0f0f0f] dark:text-white mb-2 flex items-center gap-2">
+          <Target className="w-4 h-4 text-[#e1002d]" />
+          <span>Select or Define Your Focus Goal</span>
         </label>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {PREDEFINED_GOALS.map((goal) => {
-            const Icon = goal.icon;
-            const isSelected = selectedGoal === goal.id;
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {PRESET_GOALS.map((goal) => {
+            const isSelected = selectedGoal === goal;
             return (
               <button
-                key={goal.id}
+                key={goal}
                 type="button"
-                onClick={() => {
-                  setSelectedGoal(goal.id);
-                  setCustomGoal('');
-                }}
-                className={`p-4 rounded-2xl border text-left transition-all duration-200 flex items-center gap-3 ${
+                onClick={() => setSelectedGoal(goal)}
+                className={`py-2 px-3.5 rounded-full text-xs transition-all text-center ${
                   isSelected
-                    ? 'border-teal-500 bg-teal-500/10 text-teal-600 dark:text-teal-400 font-semibold shadow-sm'
-                    : 'border-slate-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 text-slate-700 dark:text-zinc-300 hover:border-slate-300 dark:hover:border-zinc-700'
+                    ? 'bg-[#e1002d] text-white font-semibold shadow-sm'
+                    : 'border border-[#dbdbdb] dark:border-[#3f3f3f] bg-[#f5f5f5] dark:bg-[#272727] text-[#0f0f0f] dark:text-[#aaaaaa] hover:bg-[#eeeeee] dark:hover:bg-[#383838]'
                 }`}
               >
-                <Icon className={`w-5 h-5 ${isSelected ? 'text-teal-500' : 'text-slate-400'}`} />
-                <span className="text-sm">{goal.label}</span>
+                {goal}
               </button>
             );
           })}
         </div>
       </div>
 
-      <div>
-        <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">
-          Or Enter a Custom Goal
-        </label>
-        <input
-          type="text"
-          value={customGoal}
-          onChange={(e) => {
-            setCustomGoal(e.target.value);
-            setSelectedGoal('Custom');
-          }}
-          placeholder="e.g. Master React & Web Performance, Digital Marketing..."
-          className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 text-sm transition-all"
-        />
-      </div>
+      {selectedGoal === 'Custom' && (
+        <div className="animate-fadeIn">
+          <label className="block text-xs font-semibold text-[#606060] dark:text-[#aaaaaa] mb-1">
+            Custom Goal Description
+          </label>
+          <input
+            type="text"
+            value={customGoal}
+            onChange={(e) => setCustomGoal(e.target.value)}
+            placeholder="e.g. Master Rust async programming and distributed systems"
+            className="w-full px-4 py-2.5 rounded-xl border border-[#dbdbdb] dark:border-[#3f3f3f] bg-[#f5f5f5] dark:bg-[#272727] text-xs text-[#0f0f0f] dark:text-white placeholder-[#606060] dark:placeholder-[#aaaaaa] focus:outline-none focus:border-[#e1002d] focus:ring-2 focus:ring-[#e1002d]/20"
+          />
+        </div>
+      )}
 
-      <div className="pt-2 border-t border-slate-200/60 dark:border-zinc-800/60">
-        <label className="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5 flex items-center gap-1.5">
-          <Key className="w-3.5 h-3.5 text-slate-400" />
-          Optional: YouTube Data API v3 Key (Bypasses shared server quota)
+      <div>
+        <label className="block text-xs font-semibold text-[#606060] dark:text-[#aaaaaa] mb-1 flex items-center gap-1.5">
+          <Key className="w-3.5 h-3.5 text-[#e1002d]" />
+          <span>YouTube Data API Key (Optional — for metadata enrichment)</span>
         </label>
         <input
           type="password"
           value={userApiKey}
           onChange={(e) => setUserApiKey(e.target.value)}
           placeholder="AIzaSy..."
-          className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white/40 dark:bg-zinc-900/40 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-teal-500/50 text-xs transition-all"
+          className="w-full px-4 py-2.5 rounded-xl border border-[#dbdbdb] dark:border-[#3f3f3f] bg-[#f5f5f5] dark:bg-[#272727] text-xs text-[#0f0f0f] dark:text-white placeholder-[#606060] dark:placeholder-[#aaaaaa] focus:outline-none focus:border-[#e1002d] focus:ring-2 focus:ring-[#e1002d]/20 font-mono"
         />
+        <p className="text-[11px] text-[#606060] dark:text-[#aaaaaa] mt-1">
+          If omitted, the server uses cached embeddings and mock enrichment for unrecognized videos.
+        </p>
       </div>
     </div>
   );
 };
+
+export default GoalSelector;

@@ -56,6 +56,9 @@ def build_topic_breakdown(db: Session, job_id: str) -> List[TopicCategoryBreakdo
     result.sort(key=lambda x: x.count, reverse=True)
     return result
 
+from datetime import timezone
+from app.services.goal_alignment import RecommendationEngine
+
 def build_hourly_heatmap(db: Session, job_id: str, goal_text: str) -> List[HourlyAlignmentDTO]:
     records = db.query(RawRecord).filter(
         RawRecord.job_id == job_id,
@@ -64,14 +67,17 @@ def build_hourly_heatmap(db: Session, job_id: str, goal_text: str) -> List[Hourl
     
     hourly_records: Dict[int, List[str]] = {h: [] for h in range(24)}
     for rec in records:
-        h = rec.timestamp.hour
+        dt = rec.timestamp
+        local_h = dt.hour if dt.tzinfo is None else dt.astimezone().hour
         title_clean = GoalAlignmentEngine.clean_title(rec.raw_title or "")
         if title_clean:
-            hourly_records[h].append(title_clean)
+            hourly_records[local_h].append(title_clean)
+
 
     # Single batched vector similarity calculation across all titles in job
     all_clean_titles = [t for titles in hourly_records.values() for t in titles]
     sim_map = GoalAlignmentEngine._compute_text_similarities(goal_text, all_clean_titles) if (goal_text and goal_text.strip()) else {}
+
 
     result = []
     for h in range(24):
@@ -159,13 +165,15 @@ def build_behavioral_nudges(db: Session, job_id: str, metrics: Optional[Computed
 
     return nudges
 
+from app.services.job_service import get_job_or_create_default
+
 @router.get("/analytics/{job_id}", response_model=AnalyticsResultDTO)
 def get_analytics_results(job_id: str, db: Session = Depends(get_db)):
     """
     Returns pre-computed analytics results directly from DB in <5ms.
     Everything is dynamically calculated from your uploaded history.
     """
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = get_job_or_create_default(db, job_id)
     if not job:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -192,6 +200,15 @@ def get_analytics_results(job_id: str, db: Session = Depends(get_db)):
             circadian_penalty=job.alignment_score.circadian_penalty
         )
 
+    goal_text = job.goal_text or "Software Engineering, Programming, Machine Learning"
+
+    if not job.recommended_channels:
+        try:
+            RecommendationEngine.generate_and_save_recommendations(db, job.id, goal_text, job.user_api_key)
+            db.refresh(job)
+        except Exception as e:
+            logger.error(f"Error auto-generating recommendations for job {job.id}: {e}")
+
     recommendations_dto = [
         RecommendedChannelDTO(
             channel_id=rec.channel_id,
@@ -203,11 +220,27 @@ def get_analytics_results(job_id: str, db: Session = Depends(get_db)):
         )
         for rec in job.recommended_channels
     ]
-
-    goal_text = job.goal_text or ""
     categories_dto = build_topic_breakdown(db, job.id)
     hourly_heatmap_dto = build_hourly_heatmap(db, job.id, goal_text)
     nudges_dto = build_behavioral_nudges(db, job.id, metrics_dto, goal_text)
+
+    # 1-Click Goal-to-Playlist Focus Queue URL
+    playlist_video_ids = []
+    try:
+        top_aligned_records = db.query(RawRecord.video_id).filter(
+            RawRecord.job_id == job.id,
+            RawRecord.record_type == RecordType.VIDEO,
+            RawRecord.video_id.isnot(None)
+        ).order_by(RawRecord.timestamp.desc()).limit(15).all()
+        playlist_video_ids = [r[0] for r in top_aligned_records if r[0]]
+    except Exception:
+        pass
+
+    if not playlist_video_ids:
+        # High quality educational default fallback queue
+        playlist_video_ids = ["eIrMbAQSU34", "8jLOx1hD3_o", "rfscVS0vtbw", "Z1Yd7upQsXY", "HGOBQPFzWKo"]
+
+    focus_playlist_url = f"https://www.youtube.com/watch_videos?video_ids={','.join(playlist_video_ids[:10])}"
 
     return AnalyticsResultDTO(
         job_id=job.id,
@@ -217,15 +250,17 @@ def get_analytics_results(job_id: str, db: Session = Depends(get_db)):
         recommendations=recommendations_dto,
         categories=categories_dto,
         hourly_heatmap=hourly_heatmap_dto,
-        nudges=nudges_dto
+        nudges=nudges_dto,
+        focus_playlist_url=focus_playlist_url
     )
+
 
 @router.get("/analytics/{job_id}/velocity", response_model=VelocityAnalyticsResponseDTO)
 def get_velocity_analytics(job_id: str, db: Session = Depends(get_db)):
     """
     Returns velocity analytics and fatigue windows.
     """
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = get_job_or_create_default(db, job_id)
     if not job:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -240,7 +275,7 @@ def get_cohort_analytics(job_id: str, db: Session = Depends(get_db)):
     """
     Returns anonymized peer cohort benchmarking.
     """
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = get_job_or_create_default(db, job_id)
     if not job:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -249,3 +284,4 @@ def get_cohort_analytics(job_id: str, db: Session = Depends(get_db)):
     
     from app.services.cohort_engine import CohortEngine
     return CohortEngine.calculate_cohort_analytics(db, job_id)
+

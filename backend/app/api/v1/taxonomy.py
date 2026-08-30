@@ -26,6 +26,10 @@ def build_dag(request: DAGBuildRequestDTO, db: Session = Depends(get_db)):
 def get_dag(job_id: str, db: Session = Depends(get_db)):
     nodes = DAGEngine.get_dag(db, job_id)
     if not nodes:
-        return DAGTreeResponseDTO(job_id=job_id, nodes=[])
+        try:
+            DAGEngine.build_dag_for_job(db, job_id)
+            nodes = DAGEngine.get_dag(db, job_id)
+        except Exception:
+            nodes = []
     return DAGTreeResponseDTO(job_id=job_id, nodes=_build_tree(nodes))
 

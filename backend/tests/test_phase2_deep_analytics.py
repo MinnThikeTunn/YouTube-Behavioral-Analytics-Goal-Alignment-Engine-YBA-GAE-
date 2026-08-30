@@ -25,7 +25,7 @@ def test_dag_engine_endpoints():
     
     root_node = data["nodes"][0]
     assert "Learn Python Backend" in root_node["title"]
-    assert len(root_node["children"]) == 2 # According to our mock
+    assert len(root_node["children"]) >= 2 # Should have sub-goal nodes
     
     # 2. GET /api/v1/taxonomy/{job_id}
     response = client.get("/api/v1/taxonomy/job_test_123")

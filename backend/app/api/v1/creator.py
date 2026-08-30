@@ -1,10 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.schemas.creator import CommentMiningRequestDTO, CommentMiningResponseDTO, MinedCommentDTO
+from app.schemas.creator import (
+    CommentMiningRequestDTO, CommentMiningResponseDTO, MinedCommentDTO,
+    ChannelIntentDistributionDTO
+)
 from app.schemas.trend import NicheTrendRadarResponseDTO
 from app.schemas.opportunity import ContentGapMatrixResponseDTO
-from app.schemas.vas import VASEvalRequestDTO, VASEvalResponseDTO, DetailedVASAnalysisDTO
+from app.schemas.vas import (
+    VASEvalRequestDTO, VASEvalResponseDTO, DetailedVASAnalysisDTO, ClosedLoopResponseDTO,
+    ThumbnailVisionResultDTO, Composite8FactorScoreDTO, ClosedLoopSyncRequestDTO, ClosedLoopTelemetryResultDTO,
+    ABPackagingRequestDTO, ABPackagingMatrixResponseDTO, HookGenerationRequestDTO, HookGenerationResponseDTO
+)
 from app.services.comment_miner import CommentMinerService
 from app.services.trend_radar import TrendRadarEngine
 from app.services.opportunity_engine import OpportunityEngine
@@ -12,6 +20,52 @@ from app.services.packaging_optimizer import PackagingOptimizerService
 from app.db.models import MinedComment
 
 router = APIRouter()
+
+
+@router.post("/packaging/ab-matrix", response_model=ABPackagingMatrixResponseDTO)
+def evaluate_ab_packaging(request: ABPackagingRequestDTO, db: Session = Depends(get_db)):
+    """Evaluate up to 3 title/thumbnail packaging variants side-by-side."""
+    return PackagingOptimizerService.evaluate_ab_packaging(request, db)
+
+
+@router.post("/packaging/generate-hooks", response_model=HookGenerationResponseDTO)
+def generate_hook_scripts(request: HookGenerationRequestDTO):
+    """Generate 3 high-retention 30s opening hook script options (60-90 words)."""
+    return PackagingOptimizerService.generate_hook_scripts(request)
+
+
+
+@router.post("/thumbnail-analyze", response_model=ThumbnailVisionResultDTO)
+async def analyze_thumbnail(file: UploadFile = File(...)):
+    """Extract computer vision statistics from uploaded thumbnail image."""
+    contents = await file.read()
+    try:
+        return PackagingOptimizerService.analyze_thumbnail_image(contents)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/channel-intent-distribution", response_model=ChannelIntentDistributionDTO)
+def get_channel_intent_distribution(
+    channel_handle: Optional[str] = Query(None, description="Optional YouTube channel handle or ID"),
+    db: Session = Depends(get_db)
+):
+    """Aggregate channel-wide audience intent distribution and topic heatmap."""
+    miner = CommentMinerService(db)
+    return miner.get_channel_intent_distribution(channel_handle=channel_handle)
+
+
+
+@router.post("/composite-score", response_model=Composite8FactorScoreDTO)
+def compute_composite_score(request: VASEvalRequestDTO, db: Session = Depends(get_db)):
+    """Generate 8-factor composite spider score breakdown for video packaging and market fit."""
+    return PackagingOptimizerService.compute_composite_score(request, db)
+
+
+@router.post("/closed-loop/sync", response_model=ClosedLoopTelemetryResultDTO)
+def sync_closed_loop_telemetry(request: ClosedLoopSyncRequestDTO, db: Session = Depends(get_db)):
+    """Sync actual post-publish metrics and trigger closed-loop weight auto-tuning."""
+    return PackagingOptimizerService.sync_telemetry_and_autotune(request, db)
 
 
 @router.post("/vas-eval", response_model=VASEvalResponseDTO)
@@ -26,33 +80,19 @@ def detailed_vas_analysis(request: VASEvalRequestDTO):
     return PackagingOptimizerService.detailed_analysis(request)
 
 
+@router.get("/closed-loop", response_model=ClosedLoopResponseDTO)
+def get_closed_loop_telemetry(db: Session = Depends(get_db)):
+    """Closed-loop feedback tracker correlating post-publish performance with VAS predictions."""
+    return PackagingOptimizerService.get_closed_loop_telemetry(db)
+
+
+
+
 @router.get("/trends", response_model=NicheTrendRadarResponseDTO)
 def get_niche_trends():
+    """Discover real-time trending topics and trajectory velocities via dynamic search."""
     engine = TrendRadarEngine()
-    mock_data = [
-        {
-            "niche_name": "AI Coding Assistants",
-            "delta_views": 0.9,
-            "delta_uploads": 0.7,
-            "sentiment_ratio": 0.8,
-            "keyword_clusters": ["agents", "copilot", "automation"]
-        },
-        {
-            "niche_name": "Web3 Gaming",
-            "delta_views": -0.1,
-            "delta_uploads": -0.3,
-            "sentiment_ratio": 0.4,
-            "keyword_clusters": ["nft", "play-to-earn"]
-        },
-        {
-            "niche_name": "Productivity Hacks",
-            "delta_views": 0.4,
-            "delta_uploads": 0.5,
-            "sentiment_ratio": 0.6,
-            "keyword_clusters": ["notion", "time-blocking", "focus"]
-        }
-    ]
-    return engine.analyze_trends(mock_data)
+    return engine.fetch_dynamic_niche_trends()
 
 @router.post("/comments", response_model=CommentMiningResponseDTO)
 def mine_video_comments(request: CommentMiningRequestDTO, db: Session = Depends(get_db)):
@@ -88,25 +128,7 @@ def get_video_comments(video_id: str, max_results: int = Query(100), db: Session
 
 @router.get("/opportunity", response_model=ContentGapMatrixResponseDTO)
 def get_video_opportunities():
+    """Calculate dynamic opportunity matrix and AI title recommendations aligned with user goals."""
     engine = OpportunityEngine()
-    mock_data = [
-        {
-            "topic": "Building AI Agents",
-            "demand_index": 8.5,
-            "competitor_density": 0.4,
-            "recommended_titles": ["How to Build AI Agents from Scratch", "AI Agents for Beginners"]
-        },
-        {
-            "topic": "Next.js 14 Tutorial",
-            "demand_index": 9.0,
-            "competitor_density": 1.2,
-            "recommended_titles": ["Next.js 14 Crash Course", "Mastering Next.js 14"]
-        },
-        {
-            "topic": "Rust for Web Developers",
-            "demand_index": 6.0,
-            "competitor_density": 0.2,
-            "recommended_titles": ["Why Web Developers Should Learn Rust", "Rust Web Development"]
-        }
-    ]
-    return engine.analyze_opportunities(mock_data)
+    return engine.fetch_dynamic_opportunities()
+

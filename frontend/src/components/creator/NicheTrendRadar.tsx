@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '../common/Card';
 import { NicheTrendRadarResponseDTO } from '../../types';
 import { getNicheTrends } from '../../services/api';
-import { Activity, TrendingUp, TrendingDown, Minus, Loader2 } from 'lucide-react';
+import { Compass, TrendingUp, ArrowUpRight, Loader2 } from 'lucide-react';
 
 export const NicheTrendRadar: React.FC = () => {
   const [data, setData] = useState<NicheTrendRadarResponseDTO | null>(null);
@@ -17,8 +17,8 @@ export const NicheTrendRadar: React.FC = () => {
 
   if (loading) {
     return (
-      <Card className="p-8 flex justify-center items-center">
-        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+      <Card className="p-8 flex justify-center items-center rounded-2xl border border-[#dbdbdb] dark:border-[#272727] bg-white dark:bg-[#1f1f1f]">
+        <Loader2 className="w-6 h-6 animate-spin text-[#e1002d]" />
       </Card>
     );
   }
@@ -26,53 +26,59 @@ export const NicheTrendRadar: React.FC = () => {
   if (!data) return null;
 
   return (
-    <Card className="p-6">
+    <Card className="rounded-2xl border border-[#dbdbdb] dark:border-[#272727] bg-white dark:bg-[#1f1f1f] p-6 lg:p-8 shadow-yt-sm hover:shadow-yt-md">
       <div className="flex items-center gap-3 mb-6">
-        <Activity className="w-6 h-6 text-indigo-500" />
-        <h3 className="text-xl font-black text-slate-900 dark:text-white">
-          Niche Trend Radar (T_i)
-        </h3>
+        <div className="w-10 h-10 rounded-full bg-[#ffcccc]/50 dark:bg-[#e1002d]/20 text-[#e1002d] flex items-center justify-center border border-[#e1002d]/20">
+          <Compass className="w-5 h-5" />
+        </div>
+        <div>
+          <h3 className="font-headline text-xl font-bold text-[#0f0f0f] dark:text-white">Niche Trend Radar & Emerging Angles</h3>
+          <p className="text-xs text-[#606060] dark:text-[#aaaaaa]">High-Velocity Topics in Your Direct Knowledge Space</p>
+        </div>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {data.trends.map((trend) => (
-          <div key={trend.niche_name} className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 transition-all hover:scale-[1.02]">
-            <div className="flex justify-between items-start mb-2">
-              <span className="font-bold text-slate-900 dark:text-white">{trend.niche_name}</span>
-              {trend.trajectory === 'EXPLODING' && <TrendingUp className="w-4 h-4 text-emerald-500" />}
-              {trend.trajectory === 'RISING' && <TrendingUp className="w-4 h-4 text-emerald-400" />}
-              {trend.trajectory === 'STABLE' && <Minus className="w-4 h-4 text-slate-400" />}
-              {trend.trajectory === 'DECLINING' && <TrendingDown className="w-4 h-4 text-red-500" />}
+
+
+      {loading ? (
+        <div className="text-center py-10 text-xs text-[#606060] dark:text-[#aaaaaa] animate-pulse">
+          Scanning YouTube niche trajectory signals...
+        </div>
+      ) : !data || data.trends.length === 0 ? (
+        <div className="text-center py-10 text-xs text-[#606060] dark:text-[#aaaaaa]">
+          No niche trends detected yet.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {data.trends.map((t, idx) => (
+            <div
+              key={idx}
+              className="p-4 rounded-xl bg-[#f9f9f9] dark:bg-[#272727] border border-[#dbdbdb] dark:border-[#2e2e2e] flex flex-col justify-between hover:border-[#9b9b9b] dark:hover:border-[#3f3f3f] transition-all group"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#b3e5fc]/60 text-[#01579b] dark:bg-[#01579b]/40 dark:text-[#81d4fa] border border-[#3ea6ff]/30">
+                    {t.trajectory}
+                  </span>
+                  <span className="text-xs font-semibold text-[#2ba640] flex items-center gap-0.5">
+                    <TrendingUp className="w-3 h-3" /> +{t.trend_velocity.toFixed(0)}%
+                  </span>
+                </div>
+
+                <h4 className="font-headline font-bold text-sm text-[#0f0f0f] dark:text-white group-hover:text-[#e1002d] transition-colors mb-1">
+                  {t.niche_name}
+                </h4>
+                <p className="text-xs text-[#606060] dark:text-[#aaaaaa] line-clamp-2 leading-relaxed">
+                  {t.keyword_clusters.join(', ')}
+                </p>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-[#dbdbdb] dark:border-[#2e2e2e] flex items-center justify-between text-xs text-[#606060] dark:text-[#aaaaaa]">
+                <span>Market Sentiment {(data.overall_market_sentiment * 100).toFixed(0)}%</span>
+                <ArrowUpRight className="w-4 h-4 text-[#e1002d] opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
             </div>
-            
-            <div className="flex items-baseline gap-2 mb-3">
-              <span className="text-2xl font-black text-slate-900 dark:text-white">
-                {trend.trend_velocity.toFixed(2)}
-              </span>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                {trend.trajectory}
-              </span>
-            </div>
-            
-            <div className="flex flex-wrap gap-1">
-              {trend.keyword_clusters.map(kw => (
-                <span key={kw} className="px-2 py-1 bg-white dark:bg-zinc-900 rounded-lg text-[10px] font-bold text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700">
-                  {kw}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">
-          Overall Market Sentiment
-        </span>
-        <span className="text-sm font-black text-slate-900 dark:text-white">
-          {(data.overall_market_sentiment * 100).toFixed(0)}% Positive
-        </span>
-      </div>
+          ))}
+        </div>
+      )}
     </Card>
   );
 };

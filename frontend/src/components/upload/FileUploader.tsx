@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UploadCloud, FileCheck, AlertCircle, Loader2 } from 'lucide-react';
+import { UploadCloud, FileCheck, AlertCircle, Loader2, Sparkles, ArrowRight } from 'lucide-react';
 import { Card } from '../common/Card';
 import { GoalSelector } from './GoalSelector';
 import { uploadWatchHistory } from '../../services/api';
@@ -21,11 +21,11 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onUploadSuccess }) =
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selected = e.target.files[0];
-      if (selected.name.endsWith('.json')) {
+      if (selected.name.endsWith('.json') || selected.name.endsWith('.zip')) {
         setFile(selected);
         setError(null);
       } else {
-        setError('Please upload a valid JSON file (watch-history.json).');
+        setError('Please upload a valid JSON or ZIP archive.');
       }
     }
   };
@@ -35,11 +35,11 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onUploadSuccess }) =
     setIsDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const dropped = e.dataTransfer.files[0];
-      if (dropped.name.endsWith('.json')) {
+      if (dropped.name.endsWith('.json') || dropped.name.endsWith('.zip')) {
         setFile(dropped);
         setError(null);
       } else {
-        setError('Please upload a valid JSON file (watch-history.json).');
+        setError('Please upload a valid JSON or ZIP archive.');
       }
     }
   };
@@ -72,22 +72,21 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onUploadSuccess }) =
   };
 
   return (
-    <Card className="max-w-3xl mx-auto my-8">
+    <Card className="max-w-3xl mx-auto my-8 p-6 lg:p-8 rounded-2xl border border-[#dbdbdb] dark:border-[#272727] bg-white dark:bg-[#1f1f1f] shadow-yt-sm hover:shadow-yt-md">
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="font-black text-2xl tracking-tight text-slate-900 dark:text-white mb-1">
+          <h2 className="font-headline text-2xl font-bold tracking-tight text-[#0f0f0f] dark:text-white mb-1">
             YouTube Behavioral Analytics Engine
           </h2>
-          <p className="text-sm text-slate-500 dark:text-zinc-400">
+          <p className="text-xs text-[#606060] dark:text-[#aaaaaa]">
             Analyze historical Takeout exports or connect your real-time Chrome Extension telemetry.
           </p>
         </div>
         <button
           type="button"
           onClick={() => onUploadSuccess({ job_id: "stream_job_default", status: "PROCESSING", message: "Live extension mode", created_at: new Date().toISOString() })}
-          className="px-5 py-3 rounded-full bg-gradient-to-r from-teal-500 to-emerald-600 text-white font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all shadow-lg flex items-center justify-center gap-2 whitespace-nowrap"
+          className="h-9 px-4 rounded-full bg-[#e1002d] hover:bg-[#cc0026] text-white font-medium text-xs transition-colors shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap self-start md:self-auto"
         >
-
           <span>⚡ Launch Live Extension Dashboard</span>
         </button>
       </div>
@@ -100,48 +99,58 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onUploadSuccess }) =
           }}
           onDragLeave={() => setIsDragOver(false)}
           onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-[24px] p-8 text-center transition-all cursor-pointer ${
-            isDragOver
-              ? 'border-teal-500 bg-teal-500/5'
-              : file
-              ? 'border-teal-500/60 bg-teal-500/5 dark:bg-teal-500/10'
-              : 'border-slate-300 dark:border-zinc-700/80 hover:border-slate-400 dark:hover:border-zinc-600 bg-slate-50/50 dark:bg-zinc-900/30'
-          }`}
           onClick={() => document.getElementById('file-input')?.click()}
+          className={`relative border-2 border-dashed rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition-all duration-200 ${
+            isDragOver
+              ? 'border-[#e1002d] bg-[#ffcccc]/20 dark:bg-[#e1002d]/10'
+              : file
+              ? 'border-[#2ba640] bg-[#c8e6c9]/20 dark:bg-[#1b5e20]/15'
+              : 'border-[#dbdbdb] dark:border-[#3f3f3f] hover:border-[#e1002d] bg-[#f9f9f9] dark:bg-[#1f1f1f]'
+          }`}
         >
           <input
             id="file-input"
             type="file"
-            accept=".json"
+            accept=".json,.zip"
             onChange={handleFileChange}
             className="hidden"
           />
 
-          {file ? (
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-12 h-12 rounded-2xl bg-teal-500/20 text-teal-500 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+                isDragOver
+                  ? 'bg-[#e1002d] text-white shadow-lg'
+                  : file
+                  ? 'bg-[#c8e6c9] text-[#1b5e20] dark:bg-[#1b5e20] dark:text-[#a5d6a7] border border-[#2ba640]/30'
+                  : 'bg-[#eeeeee] dark:bg-[#272727] text-[#e1002d] border border-[#dbdbdb] dark:border-[#3f3f3f]'
+              }`}
+            >
+              {file ? (
                 <FileCheck className="w-6 h-6" />
-              </div>
-              <span className="font-semibold text-slate-900 dark:text-white text-sm">
-                {file.name}
-              </span>
-              <span className="text-xs text-slate-500 dark:text-zinc-400">
-                {(file.size / (1024 * 1024)).toFixed(2)} MB • Ready to analyze
-              </span>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 flex items-center justify-center">
+              ) : (
                 <UploadCloud className="w-6 h-6" />
-              </div>
-              <span className="font-semibold text-slate-800 dark:text-zinc-200 text-sm">
-                Drag & Drop watch-history.json here
-              </span>
-              <span className="text-xs text-slate-400 dark:text-zinc-500">
-                or click to browse from your computer
-              </span>
+              )}
             </div>
-          )}
+
+            <div>
+              <h3 className="font-headline text-base font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                {file ? file.name : 'Upload Google Takeout Watch History'}
+              </h3>
+              <p className="text-xs text-[#606060] dark:text-[#aaaaaa] mt-0.5 max-w-sm mx-auto">
+                {file
+                  ? `${(file.size / (1024 * 1024)).toFixed(2)} MB • Ready to analyze`
+                  : 'Drag and drop your watch-history.json or Takeout .zip archive here, or click to browse.'}
+              </p>
+            </div>
+
+            {!file && (
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#606060] dark:text-[#aaaaaa] bg-[#eeeeee] dark:bg-[#272727] px-3 py-1 rounded-full border border-[#dbdbdb] dark:border-[#3f3f3f] mt-1">
+                <Sparkles className="w-3 h-3 text-[#e1002d]" />
+                <span>Direct ZIP extraction & fast streaming JSON parser</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <GoalSelector
@@ -154,8 +163,8 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onUploadSuccess }) =
         />
 
         {error && (
-          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-sm flex items-center gap-2.5">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <div className="p-3.5 rounded-xl bg-[#ffcccc]/40 border border-[#e1002d]/30 text-[#8b0000] dark:bg-[#8b0000]/20 dark:text-[#ff9999] text-xs font-medium flex items-center gap-2.5 animate-fadeIn">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-[#e1002d]" />
             <span>{error}</span>
           </div>
         )}
@@ -163,7 +172,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onUploadSuccess }) =
         <button
           type="submit"
           disabled={loading || !file}
-          className="w-full py-4 px-6 rounded-2xl bg-slate-900 dark:bg-teal-500 text-white dark:text-slate-950 font-bold text-sm hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-500/10"
+          className="w-full h-12 rounded-full bg-[#e1002d] hover:bg-[#cc0026] active:bg-[#b30000] disabled:opacity-40 disabled:pointer-events-none text-white text-sm font-medium transition-colors duration-200 shadow-yt-sm flex items-center justify-center gap-2"
         >
           {loading ? (
             <>
@@ -171,10 +180,16 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onUploadSuccess }) =
               <span>Uploading & Initializing Job...</span>
             </>
           ) : (
-            <span>Start Behavioral Analysis</span>
+            <>
+              <span>Start Behavioral Analysis</span>
+              <ArrowRight className="w-4 h-4" />
+            </>
           )}
         </button>
       </form>
     </Card>
   );
 };
+
+export default FileUploader;
+

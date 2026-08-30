@@ -40,4 +40,16 @@ class BroadcasterManager:
         }
         await self.broadcast(json.dumps(message))
 
+    async def broadcast_velocity_update(self, job_id: str, velocity_dto: Any):
+        message = {
+            "type": "VELOCITY_UPDATE",
+            "data": {
+                "job_id": job_id,
+                "overall_v_cog": velocity_dto.overall_v_cog,
+                "sessions": [s.model_dump() if hasattr(s, 'model_dump') else (s.dict() if hasattr(s, 'dict') else s) for s in velocity_dto.sessions],
+                "fatigue_windows": [w.model_dump() if hasattr(w, 'model_dump') else (w.dict() if hasattr(w, 'dict') else w) for w in velocity_dto.fatigue_windows]
+            }
+        }
+        await self.broadcast(json.dumps(message, default=str))
+
 broadcaster = BroadcasterManager()

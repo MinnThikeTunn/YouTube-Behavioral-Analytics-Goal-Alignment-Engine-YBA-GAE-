@@ -1,4 +1,5 @@
 import React from 'react';
+import { Card } from '../common/Card';
 import { Users, TrendingUp, Medal, Info } from 'lucide-react';
 import { CohortAnalyticsResponseDTO } from '../../types';
 
@@ -10,68 +11,71 @@ export const CohortBenchmarkCard: React.FC<CohortBenchmarkCardProps> = ({ cohort
   const { benchmark, insights } = cohortAnalytics;
 
   return (
-    <div className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border border-slate-200/50 dark:border-zinc-800/50 rounded-[32px] p-8 shadow-sm transition-all duration-300 hover:shadow-md group">
+    <Card className="rounded-2xl border border-[#dbdbdb] dark:border-[#272727] bg-white dark:bg-[#1f1f1f] p-6 lg:p-8 shadow-yt-sm hover:shadow-yt-md transition-all duration-200">
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-3 bg-teal-50 dark:bg-teal-900/30 rounded-2xl">
-          <Users className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+        <div className="w-10 h-10 rounded-full bg-[#ffcccc]/50 dark:bg-[#e1002d]/20 text-[#e1002d] flex items-center justify-center border border-[#e1002d]/20">
+          <Users className="w-5 h-5" />
         </div>
         <div>
-          <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+          <h3 className="font-headline text-xl font-bold text-[#0f0f0f] dark:text-white tracking-tight">
             Peer Cohort Benchmark
           </h3>
-          <p className="text-sm text-slate-500 dark:text-zinc-400">
+          <p className="text-xs text-[#606060] dark:text-[#aaaaaa]">
             Compared against {benchmark.cohort_size.toLocaleString()} {benchmark.cohort_name}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-slate-50/50 dark:bg-zinc-800/30 rounded-3xl p-6 border border-slate-100 dark:border-zinc-800/50 flex flex-col justify-center relative overflow-hidden group-hover:bg-slate-50 dark:group-hover:bg-zinc-800/50 transition-colors">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="bg-[#f9f9f9] dark:bg-[#272727] rounded-xl p-5 border border-[#dbdbdb] dark:border-[#2e2e2e] flex flex-col justify-center relative overflow-hidden transition-colors">
           <div className="absolute -right-4 -top-4 opacity-5">
-            <Medal className="w-32 h-32" />
+            <Medal className="w-24 h-24" />
           </div>
-          <p className="text-sm font-semibold text-slate-500 dark:text-zinc-400 mb-1 flex items-center gap-2">
-            <Medal className="w-4 h-4" /> Cohort Tier
+          <p className="text-xs font-semibold text-[#606060] dark:text-[#aaaaaa] mb-1 flex items-center gap-1.5">
+            <Medal className="w-4 h-4 text-[#e1002d]" /> Cohort Tier
           </p>
-          <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          <div className="font-headline text-2xl lg:text-3xl font-bold text-[#0f0f0f] dark:text-white tracking-tight">
             {benchmark.cohort_tier}
           </div>
-          <div className="mt-2 text-sm text-teal-600 dark:text-teal-400 font-medium">
+          <div className="mt-2 text-xs text-[#2ba640] font-semibold">
             Top {100 - benchmark.percentile_rank}% of learners
           </div>
         </div>
 
-        <div className="bg-slate-50/50 dark:bg-zinc-800/30 rounded-3xl p-6 border border-slate-100 dark:border-zinc-800/50 flex flex-col justify-center relative overflow-hidden group-hover:bg-slate-50 dark:group-hover:bg-zinc-800/50 transition-colors">
+        <div className="bg-[#f9f9f9] dark:bg-[#272727] rounded-xl p-5 border border-[#dbdbdb] dark:border-[#2e2e2e] flex flex-col justify-center relative overflow-hidden transition-colors">
           <div className="absolute -right-4 -top-4 opacity-5">
-            <TrendingUp className="w-32 h-32" />
+            <TrendingUp className="w-24 h-24" />
           </div>
-          <p className="text-sm font-semibold text-slate-500 dark:text-zinc-400 mb-1 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" /> Focus Streak
+          <p className="text-xs font-semibold text-[#606060] dark:text-[#aaaaaa] mb-1 flex items-center gap-1.5">
+            <TrendingUp className="w-4 h-4 text-[#2ba640]" /> Focus Streak
           </p>
-          <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          <div className="font-headline text-2xl lg:text-3xl font-bold text-[#0f0f0f] dark:text-white tracking-tight">
             +{benchmark.focus_streak_comparison}%
           </div>
-          <div className="mt-2 text-sm text-slate-600 dark:text-zinc-400 font-medium">
+          <div className="mt-2 text-xs text-[#606060] dark:text-[#aaaaaa] font-medium">
             Longer than average peer
           </div>
         </div>
       </div>
 
-      <div className="bg-indigo-50/50 dark:bg-indigo-900/10 rounded-3xl p-6 border border-indigo-100/50 dark:border-indigo-800/30">
-        <h4 className="text-sm font-bold flex items-center gap-2 text-indigo-900 dark:text-indigo-300 mb-4 tracking-wide uppercase">
-          <Info className="w-4 h-4" /> AI Insights
+      <div className="bg-[#b3e5fc]/20 dark:bg-[#01579b]/15 rounded-xl p-5 border border-[#3ea6ff]/30">
+        <h4 className="text-xs font-bold flex items-center gap-2 text-[#01579b] dark:text-[#81d4fa] mb-3 uppercase tracking-wider">
+          <Info className="w-4 h-4 text-[#3ea6ff]" /> AI Insights
         </h4>
-        <ul className="space-y-3">
+        <ul className="space-y-2">
           {insights.map((insight, idx) => (
-            <li key={idx} className="flex items-start gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 mt-2 flex-shrink-0" />
-              <span className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed">
+            <li key={idx} className="flex items-start gap-2.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#3ea6ff] mt-1.5 flex-shrink-0" />
+              <span className="text-xs text-[#0f0f0f] dark:text-[#f1f1f1] leading-relaxed">
                 {insight}
               </span>
             </li>
           ))}
         </ul>
       </div>
-    </div>
+    </Card>
   );
 };
+
+export default CohortBenchmarkCard;
+

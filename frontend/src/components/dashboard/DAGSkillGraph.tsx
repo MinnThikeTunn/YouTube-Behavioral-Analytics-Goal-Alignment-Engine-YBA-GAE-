@@ -37,23 +37,23 @@ export const DAGSkillGraph: React.FC<DAGSkillGraphProps> = ({ jobId }) => {
   }, [jobId]);
 
   const renderNode = (node: DAGNodeDTO, depth = 0) => (
-    <div key={node.id} className={`${depth > 0 ? 'ml-3 sm:ml-6 border-l-2 border-indigo-500/20 dark:border-indigo-500/30 pl-4 my-2' : ''}`}>
-      <div className="p-3.5 rounded-2xl bg-white dark:bg-zinc-800/60 border border-slate-100 dark:border-zinc-800/80 shadow-sm hover:border-indigo-500/30 transition-all">
+    <div key={node.id} className={`${depth > 0 ? 'ml-3 sm:ml-6 border-l-2 border-[#dbdbdb] dark:border-[#3f3f3f] pl-4 my-2' : ''}`}>
+      <div className="p-3.5 rounded-xl bg-[#f9f9f9] dark:bg-[#272727] border border-[#dbdbdb] dark:border-[#2e2e2e] shadow-sm hover:border-[#9b9b9b] dark:hover:border-[#3f3f3f] transition-all">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+          <div className="font-headline font-bold text-sm text-[#0f0f0f] dark:text-white flex items-center gap-2">
             <span>{node.title}</span>
             {node.is_completed === 1 && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#c8e6c9] text-[#1b5e20] dark:bg-[#1b5e20]/60 dark:text-[#a5d6a7] border border-[#2ba640]/30">
                 Completed ✅
               </span>
             )}
           </div>
-          <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 shrink-0 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
+          <div className="text-xs font-semibold text-[#01579b] dark:text-[#81d4fa] shrink-0 bg-[#b3e5fc]/50 dark:bg-[#01579b]/40 px-2.5 py-0.5 rounded-full border border-[#3ea6ff]/30">
             {node.progress_pct.toFixed(0)}% Complete
           </div>
         </div>
         {node.description && (
-          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
+          <p className="text-xs text-[#606060] dark:text-[#aaaaaa] mt-1.5 leading-relaxed">
             {node.description}
           </p>
         )}
@@ -68,26 +68,26 @@ export const DAGSkillGraph: React.FC<DAGSkillGraphProps> = ({ jobId }) => {
   );
 
   return (
-    <Card className="p-6 rounded-[32px] backdrop-blur-xl bg-white/70 dark:bg-zinc-900/70 border border-slate-200/50 dark:border-zinc-800/50 shadow-sm">
+    <Card className="p-6 lg:p-8 rounded-2xl border border-[#dbdbdb] dark:border-[#272727] bg-white dark:bg-[#1f1f1f] shadow-yt-sm hover:shadow-yt-md">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20">
+        <div className="w-10 h-10 rounded-xl bg-[#b3e5fc]/40 dark:bg-[#01579b]/20 text-[#01579b] dark:text-[#81d4fa] flex items-center justify-center border border-[#3ea6ff]/30">
           <Network className="w-5 h-5" />
         </div>
         <div>
-          <h3 className="font-black text-xl text-slate-900 dark:text-white">Hierarchical Sub-Goal Taxonomy</h3>
-          <p className="text-xs text-slate-500 dark:text-zinc-400">DAG Execution Graph & Mastery Roadmap</p>
+          <h3 className="font-headline text-xl font-bold text-[#0f0f0f] dark:text-white">Hierarchical Sub-Goal Taxonomy</h3>
+          <p className="text-xs text-[#606060] dark:text-[#aaaaaa]">DAG Execution Graph & Mastery Roadmap</p>
         </div>
       </div>
       
       <div className="mt-4">
         {loading ? (
-          <div className="flex items-center justify-center py-8 text-sm text-slate-400 dark:text-zinc-500 animate-pulse">
+          <div className="flex items-center justify-center py-8 text-sm text-[#606060] dark:text-[#aaaaaa] animate-pulse">
             Loading taxonomy execution graph...
           </div>
         ) : nodes.length > 0 ? (
-          <div className="space-y-4">{nodes.map(node => renderNode(node, 0))}</div>
+          <div className="space-y-3">{nodes.map(node => renderNode(node, 0))}</div>
         ) : (
-          <div className="text-center py-8 text-sm text-slate-500 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800">
+          <div className="text-center py-8 text-sm text-[#606060] dark:text-[#aaaaaa] bg-[#f9f9f9] dark:bg-[#272727] rounded-xl border border-dashed border-[#dbdbdb] dark:border-[#3f3f3f]">
             No taxonomy graph generated for this goal yet.
           </div>
         )}
@@ -95,3 +95,6 @@ export const DAGSkillGraph: React.FC<DAGSkillGraphProps> = ({ jobId }) => {
     </Card>
   );
 };
+
+export default DAGSkillGraph;
+

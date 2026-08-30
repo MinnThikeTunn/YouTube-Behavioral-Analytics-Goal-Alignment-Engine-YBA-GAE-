@@ -36,6 +36,9 @@
 ### Real-Time Extension & Telemetry Entities
 - **Chrome Extension Agent (MV3)**: Lightweight browser extension running DOM scraping scripts on `youtube.com` and a Manifest V3 background service worker with 20-second WebSocket keepalive heartbeats.
 - **Real-Time Stream Receiver (`/api/v1/sync/stream`)**: FastAPI endpoint receiving real-time watch heartbeats (video ID, title, channel name, dwell seconds, DOM tags) and running sub-12ms ONNX INT8 quantized vector cosine similarity scoring.
+- **1-Click History Backfill**: Rapid browser history ingestion mechanism extracting recent 50 video events from Chrome history (`POST /api/v1/sync/stream/batch`) to eliminate cold-start empty dashboard friction.
+- **Focus Break / Snooze Pass**: Time-boxed temporary suppression (30 mins) of active Focus Shield toast alerts, displaying an ambient break badge while retaining background watch telemetry.
+- **Goal-to-Playlist Bridge**: Dynamic playlist generator converting top-scoring educational video candidates into direct YouTube watch queues (`https://www.youtube.com/watch_videos?video_ids=...`).
 - **Shadow DOM Focus Shield**: Isolated overlay modal (`attachShadow({ mode: 'open' })`) injected into YouTube's `ytd-app` DOM to display floating alignment pills and shield nudges when alignment drops below configured threshold.
 - **Broadcaster Hub (`ws://.../api/v1/ws/live`)**: WebSocket manager pushing real-time session velocity, live activity events, and updated focus scores to the React Web Dashboard.
 
@@ -44,6 +47,8 @@
 - **Hierarchical Niche Trend Radar**: Dynamic momentum metric $T_i = w_1 \cdot \text{ViewGrowth} + w_2 \cdot \text{Velocity} + w_3 \cdot \text{Engagement} - w_4 \cdot \text{Saturation}$ ranking subtopic velocity in creator niches.
 - **Video Opportunity Score ($VOS$)**: Composite ROI score ($VOS \in [0..100]$) identifying high-demand missing topics by evaluating trend momentum, audience interest, channel relevance, and competitor saturation.
 - **Viewer Attraction Score ($VAS$)**: Pre-publish packaging score ($VAS = 0.25 \cdot T_{trend} + 0.20 \cdot G_{match} + 0.20 \cdot Title + 0.20 \cdot Visual + 0.15 \cdot Hook$) synthesizing title NLP, OpenCV thumbnail vision readability, and hook script retention.
+- **Multi-Variant A/B Packaging Matrix**: Pre-publish simulation matrix evaluating up to 3 candidate titles and multiple thumbnails concurrently to compute comparative VAS rankings and predicted CTR delta.
+- **AI Hook Script Generator**: NLP retention drafting engine generating 30-second speech-paced scripts (60-90 words) designed for peak initial viewer retention.
 
 ## Architecture Decision Records (ADRs)
 
@@ -61,6 +66,16 @@
 - **Status:** Accepted
 - **Context:** Sub-50ms latency is required for real-time streaming heartbeats without blocking FastAPI event loops.
 - **Decision:** Implement ONNX Runtime INT8 dynamic quantization for sub-12ms embedding scoring on `/api/v1/sync/stream`, with automatic fallback to PyTorch `sentence-transformers`.
+
+### ADR-004: SQLite WAL Concurrency & Safe Atomic Merges
+- **Status:** Accepted
+- **Context:** High-frequency extension stream heartbeats and background JSON uploads collided on SQLite database locks, causing `PendingRollbackError` and unique constraint collisions.
+- **Decision:** Enforce `PRAGMA journal_mode = WAL;`, `PRAGMA busy_timeout = 5000;`, and wrap all metric mutations in explicit atomic `db.rollback()` exception handlers.
+
+### ADR-005: CORS Whitelisting & In-Memory Key Masking
+- **Status:** Accepted
+- **Context:** Wildcard CORS and plaintext API key disk storage exposed potential security risks.
+- **Decision:** Restrict CORS strictly to `localhost:3000`, `localhost:5173`, and `chrome-extension://*`, while masking sensitive credentials in persisted database models.
 
 
 
