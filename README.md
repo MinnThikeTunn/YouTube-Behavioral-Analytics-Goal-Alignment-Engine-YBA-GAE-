@@ -8,26 +8,23 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Vite](https://img.shields.io/badge/Vite-5.3-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
 
-**YouTube Behavioral Analytics & Goal Alignment Engine (YBA-GAE)** is a privacy-first, full-stack analytics platform that converts raw Google Takeout YouTube watch history (`watch-history.json`) into actionable behavioral metrics and semantic goal alignment insights.
+**YouTube Behavioral Analytics & Goal Alignment Engine (YBA-GAE)** is a privacy-first, full-stack analytics platform that converts live YouTube viewing streams from the browser extension into actionable behavioral metrics, real-time focus interventions, and semantic goal alignment insights.
 
-By combining deterministic timestamp sequence analysis with unsupervised **PyTorch `sentence-transformers` (`all-MiniLM-L6-v2`) vector embeddings**, YBA-GAE evaluates user focus ratios, session switching velocity, circadian watching habits, and goal alignment—all calculated locally on CPU without sending private viewing history to external cloud services.
+By combining live DOM telemetry with unsupervised **PyTorch & ONNX `sentence-transformers` (`all-MiniLM-L6-v2`) vector embeddings**, YBA-GAE evaluates user focus ratios, session switching velocity, circadian watching habits, and goal alignment in real time without manual file imports.
 
 ---
 
 ## ✨ Key Features
 
-* **⚡ Ultra-Fast Log Ingestion & Filtering:** Parses and classifies 15,000+ raw Google Takeout records in **<0.1 seconds**, automatically isolating true video viewing events while stripping Community Posts (`/post/`), Ad impressions, and Shorts creation noise.
-* **🧠 Unsupervised Semantic Goal Alignment:** Uses PyTorch 384-dimensional vector embeddings on local CPU to calculate cosine similarity between raw video metadata and personal target goals (e.g., *Software Engineering*, *Machine Learning*, *Productivity*).
+* **⚡ Real-Time Extension Telemetry & Live Sync:** Ingests live YouTube video events, channel names, and dwell times via Chrome Extension (Manifest V3) with sub-12ms ONNX INT8 quantized vector scoring and WebSocket updates.
+* **🧠 Unsupervised Semantic Goal Alignment:** Uses 384-dimensional vector embeddings on local CPU to calculate cosine similarity between video metadata and personal target goals (e.g., *Software Engineering*, *Machine Learning*, *Productivity*).
 * **📊 Mathematical Behavioral Metrics Engine:**
   * **Focus Ratio ($FR$):** Percentage of video events matching your target learning domain.
   * **Completion Probability ($P_n$):** Watch duration proxy derived from inter-click timestamp gaps ($\min(1.0, (t_{n+1} - t_n) / D_n)$) with 30-minute session boundary resets.
   * **Session Density ($SD$):** Measures rapid channel switching and doomscrolling velocity (flagged if $>15$ clicks/hour).
   * **Circadian Score ($CS$):** Tracks late-night viewing propensity (11:00 PM – 5:00 AM local time).
   * **Hourly Alignment Heatmap:** 24-hour distribution breakdown ($0..23$) pairing semantic alignment score with total hourly click volume.
-* **💡 Dual-Stream Channel Recommendations & Nudges:**
-  * **Watched Channels:** Ranks top educational channels already present in watch history using embedding similarity.
-  * **New Discovery:** Synthesizes external channel recommendations via Gemini API with local fallback caching.
-  * **Behavioral Nudge Engine:** Calculates Focus Goal Goalposts (exact number of non-aligned clicks to swap with goal-aligned content).
+* **🛡️ Real-Time Focus Shield & Nudges:** Injects a Shadow DOM Focus Shield overlay into YouTube to display floating alignment pills, break modes, and goalpost nudges.
 * **🎨 Perplexity-Inspired Minimalist Dashboard:** Designed with `rounded-[32px]` containers, ambient Dark/Light contrast modes, Recharts 24-hour circadian area charts, interactive micro-animations, and clear `[Observed Data]` vs `[Derived Estimate]` status badges.
 
 ---

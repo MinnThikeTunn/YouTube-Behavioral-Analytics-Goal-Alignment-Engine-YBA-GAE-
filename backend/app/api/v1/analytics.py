@@ -224,23 +224,13 @@ def get_analytics_results(job_id: str, db: Session = Depends(get_db)):
     hourly_heatmap_dto = build_hourly_heatmap(db, job.id, goal_text)
     nudges_dto = build_behavioral_nudges(db, job.id, metrics_dto, goal_text)
 
-    # 1-Click Goal-to-Playlist Focus Queue URL
-    playlist_video_ids = []
-    try:
-        top_aligned_records = db.query(RawRecord.video_id).filter(
-            RawRecord.job_id == job.id,
-            RawRecord.record_type == RecordType.VIDEO,
-            RawRecord.video_id.isnot(None)
-        ).order_by(RawRecord.timestamp.desc()).limit(15).all()
-        playlist_video_ids = [r[0] for r in top_aligned_records if r[0]]
-    except Exception:
-        pass
-
-    if not playlist_video_ids:
-        # High quality educational default fallback queue
-        playlist_video_ids = ["eIrMbAQSU34", "8jLOx1hD3_o", "rfscVS0vtbw", "Z1Yd7upQsXY", "HGOBQPFzWKo"]
-
-    focus_playlist_url = f"https://www.youtube.com/watch_videos?video_ids={','.join(playlist_video_ids[:10])}"
+    # 1-Click Goal-to-Playlist Focus Queue URL synthesized via Gemini
+    focus_playlist_url = RecommendationEngine.get_focus_queue_url(
+        goal_text=goal_text,
+        db=db,
+        job_id=job.id,
+        user_api_key=job.user_api_key
+    )
 
     return AnalyticsResultDTO(
         job_id=job.id,

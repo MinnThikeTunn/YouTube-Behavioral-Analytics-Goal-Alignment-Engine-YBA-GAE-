@@ -22,6 +22,9 @@ class OpportunityEngine:
             return score
         except Exception:
             lower = combined_text.lower()
+            goal_words = [w.lower() for w in goal_profile.replace("&", " ").replace(",", " ").split() if len(w) > 3]
+            if any(w in lower for w in goal_words):
+                return 91.5
             if any(k in lower for k in ["ai", "agent", "fastapi", "next", "system", "architecture", "code", "python", "rust"]):
                 return 88.5
             return 75.0
@@ -75,10 +78,17 @@ class OpportunityEngine:
         opportunities.sort(key=lambda x: (x.goal_alignment_score, x.vos_score), reverse=True)
 
         avg_vos = round(total_vos / len(opportunities), 2) if opportunities else 0.0
-        return ContentGapMatrixResponseDTO(opportunities=opportunities, avg_vos_score=avg_vos)
+        return ContentGapMatrixResponseDTO(
+            opportunities=opportunities,
+            avg_vos_score=avg_vos,
+            aligned_goal=target_goal
+        )
 
-    def fetch_dynamic_opportunities(self, niche_query: str = "high demand software tech video topics") -> ContentGapMatrixResponseDTO:
+    def fetch_dynamic_opportunities(self, niche_query: Optional[str] = None, goal: Optional[str] = None) -> ContentGapMatrixResponseDTO:
+        """Dynamically fetch video opportunities aligned with user goal using Tavily / Gemini / heuristics."""
         from app.services.tavily_search import TavilySearchService
         tavily = TavilySearchService()
-        dynamic_data = tavily.search_opportunity_topics(niche_query)
-        return self.analyze_opportunities(dynamic_data)
+        target_goal = goal if (goal and goal.strip()) else "Master Software Engineering & AI Agents"
+        dynamic_data = tavily.search_opportunity_topics(query=niche_query, goal=goal)
+        return self.analyze_opportunities(dynamic_data, target_goal=target_goal)
+

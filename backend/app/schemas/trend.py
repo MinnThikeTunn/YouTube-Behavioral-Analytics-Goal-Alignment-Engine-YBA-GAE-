@@ -13,3 +13,5 @@ class NicheTrendDTO(BaseModel):
 class NicheTrendRadarResponseDTO(BaseModel):
     trends: List[NicheTrendDTO]
     overall_market_sentiment: float
+    aligned_goal: Optional[str] = None
+

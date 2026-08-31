@@ -1,11 +1,5 @@
 export type JobStatus = 'QUEUED' | 'PROCESSING' | 'QUOTA_PAUSED' | 'COMPLETED' | 'FAILED';
 
-export interface UploadResponseDTO {
-  job_id: string;
-  status: JobStatus;
-  message: string;
-  created_at: string;
-}
 
 export interface JobLogDTO {
   id: number;
@@ -163,6 +157,7 @@ export interface NicheTrendDTO {
 export interface NicheTrendRadarResponseDTO {
   trends: NicheTrendDTO[];
   overall_market_sentiment: number;
+  aligned_goal?: string;
 }
 
 export interface VideoOpportunityDTO {
@@ -178,7 +173,9 @@ export interface VideoOpportunityDTO {
 export interface ContentGapMatrixResponseDTO {
   opportunities: VideoOpportunityDTO[];
   avg_vos_score: number;
+  aligned_goal?: string;
 }
+
 
 export interface VASEvalRequestDTO {
   title: string;
@@ -238,6 +235,7 @@ export interface ChannelIntentDistributionDTO {
   top_feature_requests: string[];
   top_confusion_points: string[];
   channel_sentiment_index: number;
+  mined_comments?: MinedCommentDTO[];
 }
 
 export interface FactorScoreDTO {

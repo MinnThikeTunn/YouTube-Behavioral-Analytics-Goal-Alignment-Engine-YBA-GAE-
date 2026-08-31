@@ -7,14 +7,6 @@ class JobCreateDTO(BaseModel):
     goal_text: str
     user_api_key: Optional[str] = None
 
-class UploadResponseDTO(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    job_id: str
-    status: JobStatus
-    message: str
-    created_at: datetime
-
 class JobLogDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

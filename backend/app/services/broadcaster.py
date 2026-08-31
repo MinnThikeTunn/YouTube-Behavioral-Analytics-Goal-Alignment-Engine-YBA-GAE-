@@ -52,4 +52,35 @@ class BroadcasterManager:
         }
         await self.broadcast(json.dumps(message, default=str))
 
+    async def broadcast_alignment_update(self, job_id: str, score_orm: Any, metrics_orm: Any = None):
+        score_data = None
+        if score_orm is not None:
+            score_data = {
+                "alignment_probability_score": getattr(score_orm, "alignment_probability_score", 0.0),
+                "focus_ratio_weight": getattr(score_orm, "focus_ratio_weight", 0.40),
+                "completion_weight": getattr(score_orm, "completion_weight", 0.60),
+                "session_density_penalty": getattr(score_orm, "session_density_penalty", 0.0),
+                "circadian_penalty": getattr(score_orm, "circadian_penalty", 0.0),
+            }
+
+        metrics_data = None
+        if metrics_orm is not None:
+            metrics_data = {
+                "focus_ratio": getattr(metrics_orm, "focus_ratio", 0.0),
+                "median_completion_prob": getattr(metrics_orm, "median_completion_prob", 0.0),
+                "session_density": getattr(metrics_orm, "session_density", 0.0),
+                "circadian_score": getattr(metrics_orm, "circadian_score", 0.0),
+                "window_period": getattr(metrics_orm, "window_period", "all_time"),
+            }
+
+        message = {
+            "type": "ALIGNMENT_UPDATE",
+            "data": {
+                "job_id": job_id,
+                "alignment_score": score_data,
+                "metrics": metrics_data
+            }
+        }
+        await self.broadcast(json.dumps(message, default=str))
+
 broadcaster = BroadcasterManager()

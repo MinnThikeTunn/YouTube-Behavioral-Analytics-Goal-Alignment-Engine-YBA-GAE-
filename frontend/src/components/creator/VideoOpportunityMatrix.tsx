@@ -3,15 +3,23 @@ import { getVideoOpportunities } from '../../services/api';
 import { ContentGapMatrixResponseDTO, VideoOpportunityDTO, FactorScoreDTO } from '../../types';
 import { CompositeSpiderChart } from './CompositeSpiderChart';
 import { Card } from '../common/Card';
-import { Target, ChevronDown, ChevronUp, Sparkles, Award } from 'lucide-react';
+import { Target, ChevronDown, ChevronUp, Sparkles, Award, Loader2 } from 'lucide-react';
 
-export const VideoOpportunityMatrix: React.FC = () => {
+
+
+
+interface VideoOpportunityMatrixProps {
+  goal?: string;
+}
+
+export const VideoOpportunityMatrix: React.FC<VideoOpportunityMatrixProps> = ({ goal }) => {
   const [data, setData] = useState<ContentGapMatrixResponseDTO | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedOpp, setSelectedOpp] = useState<VideoOpportunityDTO | null>(null);
 
   useEffect(() => {
-    getVideoOpportunities()
+    setLoading(true);
+    getVideoOpportunities(goal)
       .then((res) => {
         setData(res);
         setLoading(false);
@@ -20,14 +28,21 @@ export const VideoOpportunityMatrix: React.FC = () => {
         console.error(err);
         setLoading(false);
       });
-  }, []);
+  }, [goal]);
 
   if (loading) {
-    return <div className="text-[#606060] dark:text-[#aaaaaa] p-4 text-xs">Loading Opportunity Matrix...</div>;
+    return (
+      <Card className="p-8 flex flex-col justify-center items-center gap-3 rounded-[32px] border border-zinc-200/80 dark:border-zinc-800/80 bg-white/95 dark:bg-zinc-900/90 backdrop-blur-xl shadow-xl">
+        <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium animate-pulse">
+          Evaluating content gap matrix and VOS scores {goal ? `for "${goal}"` : 'for your target goal'}...
+        </p>
+      </Card>
+    );
   }
 
   if (!data || !data.opportunities) {
-    return <div className="text-[#606060] dark:text-[#aaaaaa] p-4 text-xs">No data available</div>;
+    return <div className="text-zinc-500 dark:text-zinc-400 p-4 text-xs">No data available</div>;
   }
 
   const getTierColor = (tier: string) => {
@@ -55,25 +70,34 @@ export const VideoOpportunityMatrix: React.FC = () => {
   };
 
   return (
-    <Card className="rounded-2xl border border-[#dbdbdb] dark:border-[#272727] bg-white dark:bg-[#1f1f1f] p-6 lg:p-8 shadow-yt-sm hover:shadow-yt-md space-y-6">
+    <Card className="rounded-[32px] border border-zinc-200/80 dark:border-zinc-800/80 bg-white/95 dark:bg-zinc-900/90 backdrop-blur-xl p-6 lg:p-8 shadow-xl space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#ffcccc]/50 dark:bg-[#e1002d]/20 text-[#e1002d] flex items-center justify-center border border-[#e1002d]/20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center border border-emerald-500/20 shadow-xs">
             <Award className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="font-headline text-xl lg:text-2xl font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+            <h2 className="font-black text-xl lg:text-2xl text-zinc-900 dark:text-white tracking-tight">
               Content Gap Matrix & Opportunity Radar
             </h2>
-            <p className="text-xs text-[#606060] dark:text-[#aaaaaa] mt-0.5">Identify unsaturated high-demand content gaps using 8-factor composite scoring.</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Identify unsaturated high-demand content gaps using 8-factor composite scoring.</p>
           </div>
         </div>
-        <div className="flex flex-col items-end">
-          <span className="text-xs text-[#606060] dark:text-[#aaaaaa] uppercase tracking-wider font-semibold">Avg VOS Score</span>
-          <span className="font-headline text-2xl font-bold text-[#0f0f0f] dark:text-white">{data.avg_vos_score.toFixed(1)}</span>
+        <div className="flex items-center gap-4 self-start sm:self-center">
+          {(goal || data.aligned_goal) && (
+            <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5 shadow-xs">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <span className="truncate max-w-[240px]">Goal: {goal || data.aligned_goal}</span>
+            </span>
+          )}
+          <div className="flex flex-col items-end shrink-0">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-bold">Avg VOS Score</span>
+            <span className="font-black text-2xl text-zinc-900 dark:text-white">{data.avg_vos_score.toFixed(1)}</span>
+          </div>
         </div>
       </div>
+
 
       {/* Opportunity Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -82,53 +106,53 @@ export const VideoOpportunityMatrix: React.FC = () => {
           return (
             <div
               key={idx}
-              className={`rounded-xl p-5 flex flex-col justify-between space-y-4 border transition-all ${
+              className={`rounded-2xl p-5 flex flex-col justify-between space-y-4 border transition-all duration-300 hover:scale-[1.01] ${
                 isSelected
-                  ? 'border-[#e1002d] bg-[#f9f9f9] dark:bg-[#272727] shadow-sm'
-                  : 'bg-[#f9f9f9] dark:bg-[#272727] border-[#dbdbdb] dark:border-[#2e2e2e] hover:border-[#9b9b9b] dark:hover:border-[#3f3f3f]'
+                  ? 'border-emerald-500 bg-zinc-100 dark:bg-zinc-800 shadow-md ring-2 ring-emerald-500/20'
+                  : 'bg-zinc-50 dark:bg-zinc-800/60 border-zinc-200/80 dark:border-zinc-700/60 hover:border-zinc-400 dark:hover:border-zinc-500 shadow-xs'
               }`}
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <div className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase border ${getTierColor(opp.opportunity_tier)}`}>
+                  <div className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${getTierColor(opp.opportunity_tier)} shadow-xs`}>
                     {opp.opportunity_tier.replace('_', ' ')}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#ffcccc]/40 text-[#8b0000] dark:bg-[#e1002d]/20 dark:text-[#ff9999] border border-[#e1002d]/20">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                       {opp.goal_alignment_score ? `${opp.goal_alignment_score.toFixed(0)}% Goal Aligned` : '92% Goal Aligned'}
                     </span>
-                    <span className="text-xs font-mono font-bold text-[#0f0f0f] dark:text-[#f1f1f1]">VOS: {opp.vos_score.toFixed(1)}</span>
+                    <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">VOS: {opp.vos_score.toFixed(1)}</span>
                   </div>
                 </div>
 
-                <h3 className="font-headline text-sm font-bold text-[#0f0f0f] dark:text-white mb-3 line-clamp-2">{opp.topic}</h3>
+                <h3 className="font-bold text-sm text-zinc-900 dark:text-white mb-3 line-clamp-2 leading-snug">{opp.topic}</h3>
 
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
-                  <div className="p-2 rounded-lg bg-white dark:bg-[#1f1f1f] border border-[#dbdbdb] dark:border-[#3f3f3f]">
-                    <span className="text-[#606060] dark:text-[#aaaaaa] block">Demand</span>
-                    <span className="text-[#0f0f0f] dark:text-white font-bold">{opp.demand_index.toFixed(1)}</span>
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-700/80">
+                    <span className="text-zinc-500 dark:text-zinc-400 block text-[10px] font-medium">Demand</span>
+                    <span className="text-zinc-900 dark:text-white font-bold">{opp.demand_index.toFixed(1)}</span>
                   </div>
-                  <div className="p-2 rounded-lg bg-white dark:bg-[#1f1f1f] border border-[#dbdbdb] dark:border-[#3f3f3f]">
-                    <span className="text-[#606060] dark:text-[#aaaaaa] block">Competition</span>
-                    <span className="text-[#0f0f0f] dark:text-white font-bold">{opp.competitor_density.toFixed(1)}</span>
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-700/80">
+                    <span className="text-zinc-500 dark:text-zinc-400 block text-[10px] font-medium">Competition</span>
+                    <span className="text-zinc-900 dark:text-white font-bold">{opp.competitor_density.toFixed(1)}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-[#dbdbdb] dark:border-[#2e2e2e] space-y-3">
+              <div className="pt-3 border-t border-zinc-200 dark:border-zinc-700/60 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-[10px] text-[#606060] dark:text-[#aaaaaa] uppercase font-bold flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[#e1002d]" /> Recommended Titles
+                  <h4 className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase font-bold flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-500" /> Recommended Titles
                   </h4>
                 </div>
                 <ul className="space-y-1.5">
                   {opp.recommended_titles.map((title, i) => (
-                    <li key={i} className="text-xs text-[#0f0f0f] dark:text-[#f1f1f1] flex items-center justify-between gap-2">
+                    <li key={i} className="text-xs text-zinc-800 dark:text-zinc-200 flex items-center justify-between gap-2">
                       <div className="flex items-start gap-2 min-w-0">
-                        <span className="text-[#e1002d] mt-0.5">•</span>
+                        <span className="text-emerald-500 mt-0.5">•</span>
                         <span className="truncate">{title}</span>
                       </div>
-                      <span className="text-[10px] font-semibold text-[#1b5e20] dark:text-[#a5d6a7] bg-[#c8e6c9] dark:bg-[#1b5e20]/60 px-1.5 py-0.5 rounded-full border border-[#2ba640]/30 whitespace-nowrap shrink-0">
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 whitespace-nowrap shrink-0">
                         {opp.goal_alignment_score ? `${opp.goal_alignment_score.toFixed(0)}% Match` : '94% Match'}
                       </span>
                     </li>
@@ -137,9 +161,9 @@ export const VideoOpportunityMatrix: React.FC = () => {
 
                 <button
                   onClick={() => setSelectedOpp(isSelected ? null : opp)}
-                  className="w-full h-8 rounded-full bg-[#eeeeee] dark:bg-[#383838] hover:bg-[#e8e8e8] dark:hover:bg-[#484848] text-[#0f0f0f] dark:text-[#f1f1f1] text-xs font-medium transition-all flex items-center justify-center gap-1.5"
+                  className="w-full h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 shadow-xs"
                 >
-                  <Target className="w-3.5 h-3.5 text-[#e1002d]" />
+                  <Target className="w-3.5 h-3.5 text-emerald-500" />
                   <span>{isSelected ? 'Hide 8-Factor Radar' : 'View 8-Factor Spider Radar'}</span>
                   {isSelected ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                 </button>
@@ -151,14 +175,14 @@ export const VideoOpportunityMatrix: React.FC = () => {
 
       {/* Expanded 8-Factor Composite Spider Chart for Selected Opportunity */}
       {selectedOpp && (
-        <div className="pt-4 border-t border-[#dbdbdb] dark:border-[#2e2e2e] animate-fadeIn">
+        <div className="pt-5 border-t border-zinc-200 dark:border-zinc-800 animate-fadeIn">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-headline text-sm font-bold text-[#0f0f0f] dark:text-white uppercase tracking-wider flex items-center gap-2">
-              <Target className="w-4 h-4 text-[#e1002d]" /> 8-Factor Spider Radar for "{selectedOpp.topic}"
+            <h3 className="font-bold text-sm text-zinc-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <Target className="w-4 h-4 text-emerald-500" /> 8-Factor Spider Radar for "{selectedOpp.topic}"
             </h3>
             <button
               onClick={() => setSelectedOpp(null)}
-              className="text-xs text-[#606060] dark:text-[#aaaaaa] hover:text-[#e1002d] underline"
+              className="text-xs font-semibold text-zinc-500 hover:text-emerald-500 dark:text-zinc-400 dark:hover:text-emerald-400 underline transition-colors"
             >
               Close Breakdown
             </button>

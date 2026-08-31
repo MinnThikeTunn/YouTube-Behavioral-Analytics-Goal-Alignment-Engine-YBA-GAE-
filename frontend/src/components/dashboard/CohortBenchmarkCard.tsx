@@ -1,81 +1,66 @@
 import React from 'react';
 import { Card } from '../common/Card';
-import { Users, TrendingUp, Medal, Info } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { CohortAnalyticsResponseDTO } from '../../types';
 
-interface CohortBenchmarkCardProps {
-  cohortAnalytics: CohortAnalyticsResponseDTO;
+export interface CohortBenchmarkCardProps {
+  cohortAnalytics?: CohortAnalyticsResponseDTO;
+  insights?: string[];
 }
 
-export const CohortBenchmarkCard: React.FC<CohortBenchmarkCardProps> = ({ cohortAnalytics }) => {
-  const { benchmark, insights } = cohortAnalytics;
+export const CohortBenchmarkCard: React.FC<CohortBenchmarkCardProps> = ({ cohortAnalytics, insights: directInsights }) => {
+  const insights = directInsights || cohortAnalytics?.insights || [];
 
   return (
-    <Card className="rounded-2xl border border-[#dbdbdb] dark:border-[#272727] bg-white dark:bg-[#1f1f1f] p-6 lg:p-8 shadow-yt-sm hover:shadow-yt-md transition-all duration-200">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-full bg-[#ffcccc]/50 dark:bg-[#e1002d]/20 text-[#e1002d] flex items-center justify-center border border-[#e1002d]/20">
-          <Users className="w-5 h-5" />
+    <Card className="rounded-[28px] lg:rounded-[32px] border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/80 backdrop-blur-xl p-6 lg:p-8 shadow-sm hover:shadow-md transition-all duration-300">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-sm flex-shrink-0">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-black text-xl lg:text-2xl text-zinc-900 dark:text-white tracking-tight">
+              AI Insights
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              Synthesized behavioral patterns and personalized recommendations
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-headline text-xl font-bold text-[#0f0f0f] dark:text-white tracking-tight">
-            Peer Cohort Benchmark
-          </h3>
-          <p className="text-xs text-[#606060] dark:text-[#aaaaaa]">
-            Compared against {benchmark.cohort_size.toLocaleString()} {benchmark.cohort_name}
-          </p>
-        </div>
+
+        <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 w-fit">
+          <Sparkles className="w-3.5 h-3.5" />
+          AI Synthesized
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="bg-[#f9f9f9] dark:bg-[#272727] rounded-xl p-5 border border-[#dbdbdb] dark:border-[#2e2e2e] flex flex-col justify-center relative overflow-hidden transition-colors">
-          <div className="absolute -right-4 -top-4 opacity-5">
-            <Medal className="w-24 h-24" />
-          </div>
-          <p className="text-xs font-semibold text-[#606060] dark:text-[#aaaaaa] mb-1 flex items-center gap-1.5">
-            <Medal className="w-4 h-4 text-[#e1002d]" /> Cohort Tier
-          </p>
-          <div className="font-headline text-2xl lg:text-3xl font-bold text-[#0f0f0f] dark:text-white tracking-tight">
-            {benchmark.cohort_tier}
-          </div>
-          <div className="mt-2 text-xs text-[#2ba640] font-semibold">
-            Top {100 - benchmark.percentile_rank}% of learners
-          </div>
-        </div>
-
-        <div className="bg-[#f9f9f9] dark:bg-[#272727] rounded-xl p-5 border border-[#dbdbdb] dark:border-[#2e2e2e] flex flex-col justify-center relative overflow-hidden transition-colors">
-          <div className="absolute -right-4 -top-4 opacity-5">
-            <TrendingUp className="w-24 h-24" />
-          </div>
-          <p className="text-xs font-semibold text-[#606060] dark:text-[#aaaaaa] mb-1 flex items-center gap-1.5">
-            <TrendingUp className="w-4 h-4 text-[#2ba640]" /> Focus Streak
-          </p>
-          <div className="font-headline text-2xl lg:text-3xl font-bold text-[#0f0f0f] dark:text-white tracking-tight">
-            +{benchmark.focus_streak_comparison}%
-          </div>
-          <div className="mt-2 text-xs text-[#606060] dark:text-[#aaaaaa] font-medium">
-            Longer than average peer
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-[#b3e5fc]/20 dark:bg-[#01579b]/15 rounded-xl p-5 border border-[#3ea6ff]/30">
-        <h4 className="text-xs font-bold flex items-center gap-2 text-[#01579b] dark:text-[#81d4fa] mb-3 uppercase tracking-wider">
-          <Info className="w-4 h-4 text-[#3ea6ff]" /> AI Insights
-        </h4>
-        <ul className="space-y-2">
+      {insights.length > 0 ? (
+        <div className="space-y-3">
           {insights.map((insight, idx) => (
-            <li key={idx} className="flex items-start gap-2.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#3ea6ff] mt-1.5 flex-shrink-0" />
-              <span className="text-xs text-[#0f0f0f] dark:text-[#f1f1f1] leading-relaxed">
+            <div
+              key={idx}
+              className="group flex items-start gap-3.5 p-4 lg:p-5 rounded-2xl bg-zinc-50/80 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-700/50 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 hover:bg-zinc-100/70 dark:hover:bg-zinc-800/70 transition-all duration-200"
+            >
+              <div className="w-6 h-6 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5 border border-emerald-500/20">
+                {idx + 1}
+              </div>
+              <p className="text-sm text-zinc-700 dark:text-zinc-200 leading-relaxed font-medium">
                 {insight}
-              </span>
-            </li>
+              </p>
+            </div>
           ))}
-        </ul>
-      </div>
+        </div>
+      ) : (
+        <div className="p-6 rounded-2xl bg-zinc-50/60 dark:bg-zinc-800/30 border border-dashed border-zinc-300 dark:border-zinc-700 text-center">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            No AI insights available yet. Process more goal-aligned watch history to generate personalized observations.
+          </p>
+        </div>
+      )}
     </Card>
   );
 };
 
+export const AIInsightsCard = CohortBenchmarkCard;
 export default CohortBenchmarkCard;
 

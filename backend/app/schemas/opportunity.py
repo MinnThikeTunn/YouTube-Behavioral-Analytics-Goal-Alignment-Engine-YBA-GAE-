@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 class VideoOpportunityDTO(BaseModel):
     topic: str
@@ -13,3 +13,5 @@ class VideoOpportunityDTO(BaseModel):
 class ContentGapMatrixResponseDTO(BaseModel):
     opportunities: List[VideoOpportunityDTO]
     avg_vos_score: float
+    aligned_goal: Optional[str] = None
+

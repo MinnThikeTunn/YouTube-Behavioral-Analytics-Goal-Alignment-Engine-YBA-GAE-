@@ -15,7 +15,10 @@ def _build_tree(nodes):
 @router.post("/dag", response_model=DAGTreeResponseDTO)
 def build_dag(request: DAGBuildRequestDTO, db: Session = Depends(get_db)):
     try:
-        DAGEngine.build_dag_for_job(db, request.job_id)
+        from app.db.models import Job
+        job = db.query(Job).filter(Job.id == request.job_id).first()
+        user_key = job.user_api_key if job else None
+        DAGEngine.build_dag_for_job(db, request.job_id, user_api_key=user_key)
         nodes = DAGEngine.get_dag(db, request.job_id)
         return DAGTreeResponseDTO(job_id=request.job_id, nodes=_build_tree(nodes))
     except ValueError as e:
@@ -24,12 +27,23 @@ def build_dag(request: DAGBuildRequestDTO, db: Session = Depends(get_db)):
 @router.get("/{job_id}", response_model=DAGTreeResponseDTO)
 @router.get("/dag/{job_id}", response_model=DAGTreeResponseDTO)
 def get_dag(job_id: str, db: Session = Depends(get_db)):
+    from app.db.models import Job
     nodes = DAGEngine.get_dag(db, job_id)
-    if not nodes:
+    
+    needs_rebuild = not nodes
+    if nodes and not needs_rebuild:
+        legacy_signatures = ["Core Principles & Theory", "Practical Execution & Projects", "Mastery & Optimization"]
+        if any(any(sig in (n.title or "") for sig in legacy_signatures) for n in nodes):
+            needs_rebuild = True
+
+    if needs_rebuild:
         try:
-            DAGEngine.build_dag_for_job(db, job_id)
+            job = db.query(Job).filter(Job.id == job_id).first()
+            user_key = job.user_api_key if job else None
+            DAGEngine.build_dag_for_job(db, job_id, user_api_key=user_key)
             nodes = DAGEngine.get_dag(db, job_id)
         except Exception:
-            nodes = []
+            if not nodes:
+                nodes = []
     return DAGTreeResponseDTO(job_id=job_id, nodes=_build_tree(nodes))
 

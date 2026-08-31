@@ -15,7 +15,7 @@ class EntryClassifier:
 
     @staticmethod
     def extract_channel_info(subtitles: Optional[List[Dict[str, Any]]]) -> Tuple[Optional[str], Optional[str]]:
-        """Extracts channel_id and channel_title directly from Takeout subtitles array."""
+        """Extracts channel_id and channel_title directly from video metadata array."""
         if not subtitles or not isinstance(subtitles, list) or len(subtitles) == 0:
             return None, None
         sub = subtitles[0]

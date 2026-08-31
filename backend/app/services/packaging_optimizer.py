@@ -6,9 +6,13 @@ to objectively evaluate video packaging quality before publishing.
 """
 import io
 import re
-from typing import List, Dict, Optional
+import json
+import logging
+from typing import List, Dict, Optional, Any
+import httpx
 from PIL import Image, ImageStat, ImageEnhance, ImageFilter
 from sqlalchemy.orm import Session
+from app.config import settings
 from app.schemas.vas import (
     VASEvalRequestDTO, VASEvalResponseDTO,
     ThumbnailAnalysisDTO, TitleAnalysisDTO, TitlePatternDTO,
@@ -20,6 +24,8 @@ from app.schemas.vas import (
 )
 
 from app.db.models import VASEvaluation, VASPostPublishTelemetry
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -207,6 +213,60 @@ class PackagingOptimizerService:
         ]
         return ideas
 
+    # ── Gemini AI Helper ─────────────────────────────────────────
+    @classmethod
+    def _call_gemini_json(
+        cls,
+        prompt: str,
+        user_api_key: Optional[str] = None
+    ) -> Optional[Any]:
+        """Calls Gemini Flash models with fallback chain, parsing and returning clean JSON.
+        Returns None on missing key, timeout, or parsing failure to ensure graceful fallback.
+        """
+        gemini_key = user_api_key or settings.GEMINI_API_KEY or settings.YOUTUBE_API_KEY
+        if not gemini_key:
+            return None
+
+        candidate_models = [
+            "gemini-3.6-flash",
+            "gemini-3.5-flash",
+            "gemini-flash-latest",
+            "gemini-3.7-flash"
+        ]
+
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "temperature": 0.2
+            }
+        }
+
+        for model_name in candidate_models:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
+                r = httpx.post(url, json=payload, timeout=6.5)
+                if r.status_code == 429:
+                    import time
+                    time.sleep(1.0)
+                    r = httpx.post(url, json=payload, timeout=6.5)
+
+                if r.status_code == 200:
+                    resp_json = r.json()
+                    parts = resp_json.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                    raw_text = "".join([p["text"] for p in parts if "text" in p and p["text"]]).strip()
+                    cleaned_text = raw_text.replace("```json", "").replace("```", "").strip()
+                    data = json.loads(cleaned_text)
+                    logger.info(f"Gemini call succeeded using model {model_name}.")
+                    return data
+                else:
+                    logger.debug(f"Gemini model {model_name} returned HTTP {r.status_code}")
+            except Exception as e:
+                logger.debug(f"Gemini model {model_name} error: {e}")
+                continue
+
+        return None
+
     # ── Main Evaluation Orchestrator ────────────────────────────
     @classmethod
     def evaluate(
@@ -214,17 +274,50 @@ class PackagingOptimizerService:
         request: VASEvalRequestDTO,
         db: Optional[Session] = None
     ) -> VASEvalResponseDTO:
-        """Full VAS evaluation pipeline: score → recommend → persist → respond."""
-        title_score = cls.calculate_title_score(request.title)
-        thumbnail_score = cls.calculate_thumbnail_score(
-            request.thumbnail_brightness,
-            request.thumbnail_contrast
-        )
-        hook_score = cls.calculate_hook_score(request.hook_script)
-        overall_vas = cls.calculate_vas(title_score, thumbnail_score, hook_score)
+        """Full VAS evaluation pipeline: score → recommend → persist → respond.
+        Enhanced with Gemini AI psychological scoring and fallback to heuristics.
+        """
+        ai_data = None
+        prompt = f"""
+        Act as an elite YouTube packaging and algorithmic growth strategist.
+        Evaluate this YouTube video packaging concept:
+        - Title: "{request.title}"
+        - Opening 30s Hook Script: "{request.hook_script}"
+        - Thumbnail Brightness (0.0-1.0): {request.thumbnail_brightness if request.thumbnail_brightness is not None else 0.6}
+        - Thumbnail Contrast (0.0-1.0): {request.thumbnail_contrast if request.thumbnail_contrast is not None else 0.7}
 
-        recommendations = cls.generate_recommendations(title_score, thumbnail_score, hook_score)
-        improved_titles = cls.generate_improved_titles(request.title)
+        Provide objective, high-accuracy scores (0.0 - 100.0) based on viewer click psychology, curiosity gap, and retention pacing.
+        Return strictly valid JSON with no markdown formatting:
+        {{
+            "title_score": <float 0.0-100.0>,
+            "thumbnail_score": <float 0.0-100.0>,
+            "hook_score": <float 0.0-100.0>,
+            "recommendations": [<string>, <string>, ...],
+            "improved_title_ideas": [<string>, <string>, <string>]
+        }}
+        """
+        try:
+            ai_data = cls._call_gemini_json(prompt)
+        except Exception as e:
+            logger.debug(f"Gemini VAS eval failed, falling back: {e}")
+
+        if isinstance(ai_data, dict) and "title_score" in ai_data and "hook_score" in ai_data:
+            title_score = round(float(ai_data.get("title_score", 50.0)), 1)
+            thumbnail_score = round(float(ai_data.get("thumbnail_score", 55.0)), 1)
+            hook_score = round(float(ai_data.get("hook_score", 45.0)), 1)
+            recommendations = ai_data.get("recommendations", [])
+            improved_titles = ai_data.get("improved_title_ideas", [])
+        else:
+            title_score = cls.calculate_title_score(request.title)
+            thumbnail_score = cls.calculate_thumbnail_score(
+                request.thumbnail_brightness,
+                request.thumbnail_contrast
+            )
+            hook_score = cls.calculate_hook_score(request.hook_script)
+            recommendations = cls.generate_recommendations(title_score, thumbnail_score, hook_score)
+            improved_titles = cls.generate_improved_titles(request.title)
+
+        overall_vas = cls.calculate_vas(title_score, thumbnail_score, hook_score)
 
         # Persist evaluation for closed-loop telemetry
         if db is not None:
@@ -403,7 +496,155 @@ class PackagingOptimizerService:
     # ── Detailed VAS Analysis Orchestrator ──────────────────────
     @classmethod
     def detailed_analysis(cls, request: VASEvalRequestDTO) -> DetailedVASAnalysisDTO:
-        """Full detailed diagnostic analysis combining all analyzers."""
+        """Full detailed diagnostic analysis combining all analyzers.
+        Enhanced with Gemini AI semantic diagnostics and fallback to heuristics.
+        """
+        ai_data = None
+        escaped_title = request.title.replace('"', '\\"')
+        escaped_hook = request.hook_script.replace('"', '\\"')
+        b_val = request.thumbnail_brightness if request.thumbnail_brightness is not None else 0.6
+        c_val = request.thumbnail_contrast if request.thumbnail_contrast is not None else 0.7
+
+        prompt = f"""
+        Act as an elite YouTube metadata diagnostic auditor and script consultant.
+        Perform a comprehensive deep analysis on this YouTube packaging setup:
+        - Title: "{escaped_title}"
+        - Opening 30s Hook Script: "{escaped_hook}"
+        - Thumbnail Brightness (0.0-1.0): {b_val}
+        - Thumbnail Contrast (0.0-1.0): {c_val}
+
+        Return strictly valid JSON with no markdown formatting:
+        {{
+            "title_score": 90.0,
+            "thumbnail_score": 85.0,
+            "hook_score": 88.0,
+            "thumbnail_analysis": {{
+                "brightness": {b_val},
+                "contrast": {c_val},
+                "color_balance": 82.0,
+                "saturation_estimate": 80.0,
+                "visual_impact_score": 85.0,
+                "legibility_score": 88.0,
+                "readability_grade": "EXCELLENT"
+            }},
+            "title_analysis": {{
+                "original_title": "{escaped_title}",
+                "char_count": {len(request.title)},
+                "curiosity_word_count": 2,
+                "power_word_count": 1,
+                "has_number": true,
+                "has_question": false,
+                "pattern_suggestions": [
+                    {{"pattern_type": "Number Hook", "suggested_title": "Example Title 1"}},
+                    {{"pattern_type": "Negative Hook", "suggested_title": "Example Title 2"}},
+                    {{"pattern_type": "Curiosity Gap", "suggested_title": "Example Title 3"}},
+                    {{"pattern_type": "Comparison Hook", "suggested_title": "Example Title 4"}},
+                    {{"pattern_type": "How-To Authority", "suggested_title": "Example Title 5"}}
+                ]
+            }},
+            "hook_analysis": {{
+                "word_count": {len(request.hook_script.split())},
+                "word_pacing_score": 92.0,
+                "emotional_arc_score": 86.0,
+                "call_to_action_presence": false,
+                "hook_phrase_count": 2,
+                "estimated_retention_pct": 88.0
+            }},
+            "recommendations": ["Recommendation 1", "Recommendation 2"],
+            "improved_title_ideas": [
+                {{"pattern_type": "Number Hook", "suggested_title": "Example Title 1"}}
+            ]
+        }}
+        """
+        try:
+            ai_data = cls._call_gemini_json(prompt)
+        except Exception as e:
+            logger.debug(f"Gemini detailed analysis failed, falling back: {e}")
+
+        if isinstance(ai_data, dict) and "title_analysis" in ai_data and "hook_analysis" in ai_data:
+            try:
+                title_score = round(float(ai_data.get("title_score", 50.0)), 1)
+                thumbnail_score = round(float(ai_data.get("thumbnail_score", 55.0)), 1)
+                hook_score = round(float(ai_data.get("hook_score", 45.0)), 1)
+                overall_vas = cls.calculate_vas(title_score, thumbnail_score, hook_score)
+
+                # Thumbnail Analysis DTO
+                t_dict = ai_data.get("thumbnail_analysis", {})
+                thumbnail_analysis = ThumbnailAnalysisDTO(
+                    brightness=t_dict.get("brightness", request.thumbnail_brightness),
+                    contrast=t_dict.get("contrast", request.thumbnail_contrast),
+                    color_balance=round(float(t_dict.get("color_balance", 70.0)), 1),
+                    saturation_estimate=round(float(t_dict.get("saturation_estimate", 70.0)), 1),
+                    visual_impact_score=round(float(t_dict.get("visual_impact_score", 70.0)), 1),
+                    legibility_score=round(float(t_dict.get("legibility_score", 70.0)), 1),
+                    readability_grade=t_dict.get("readability_grade", "GOOD"),
+                )
+
+                # Title Analysis DTO & Pattern Suggestions
+                ti_dict = ai_data.get("title_analysis", {})
+                patterns_raw = ti_dict.get("pattern_suggestions", [])
+                pattern_suggestions = [
+                    TitlePatternDTO(
+                        pattern_type=p.get("pattern_type", "Standard"),
+                        suggested_title=p.get("suggested_title", request.title),
+                        goal_alignment_score=p.get("goal_alignment_score")
+                    )
+                    for p in patterns_raw
+                ]
+                if not pattern_suggestions:
+                    pattern_suggestions = cls.generate_title_patterns(request.title)
+
+                title_analysis = TitleAnalysisDTO(
+                    original_title=request.title,
+                    char_count=ti_dict.get("char_count", len(request.title)),
+                    curiosity_word_count=ti_dict.get("curiosity_word_count", 0),
+                    power_word_count=ti_dict.get("power_word_count", 0),
+                    has_number=ti_dict.get("has_number", False),
+                    has_question=ti_dict.get("has_question", False),
+                    pattern_suggestions=pattern_suggestions,
+                )
+
+                # Hook Analysis DTO
+                h_dict = ai_data.get("hook_analysis", {})
+                hook_analysis = HookAnalysisDTO(
+                    word_count=h_dict.get("word_count", len(request.hook_script.split())),
+                    word_pacing_score=round(float(h_dict.get("word_pacing_score", 70.0)), 1),
+                    emotional_arc_score=round(float(h_dict.get("emotional_arc_score", 60.0)), 1),
+                    call_to_action_presence=bool(h_dict.get("call_to_action_presence", False)),
+                    hook_phrase_count=int(h_dict.get("hook_phrase_count", 0)),
+                    estimated_retention_pct=round(float(h_dict.get("estimated_retention_pct", 65.0)), 1),
+                )
+
+                recommendations = ai_data.get("recommendations", [])
+                if not recommendations:
+                    recommendations = cls.generate_recommendations(title_score, thumbnail_score, hook_score)
+
+                improved_titles_raw = ai_data.get("improved_title_ideas", [])
+                improved_title_ideas = [
+                    TitlePatternDTO(
+                        pattern_type=p.get("pattern_type", "High CTR"),
+                        suggested_title=p.get("suggested_title", request.title)
+                    ) if isinstance(p, dict) else TitlePatternDTO(pattern_type="High CTR", suggested_title=str(p))
+                    for p in improved_titles_raw
+                ]
+                if len(improved_title_ideas) < 5:
+                    improved_title_ideas = pattern_suggestions
+
+                return DetailedVASAnalysisDTO(
+                    overall_vas=overall_vas,
+                    title_score=title_score,
+                    thumbnail_score=thumbnail_score,
+                    hook_score=hook_score,
+                    thumbnail_analysis=thumbnail_analysis,
+                    title_analysis=title_analysis,
+                    hook_analysis=hook_analysis,
+                    recommendations=recommendations,
+                    improved_title_ideas=improved_title_ideas,
+                )
+            except Exception as parse_err:
+                logger.debug(f"Failed to parse Gemini diagnostic DTOs, falling back: {parse_err}")
+
+        # Fallback to deterministic heuristic analyzers
         title_score = cls.calculate_title_score(request.title)
         thumbnail_score = cls.calculate_thumbnail_score(
             request.thumbnail_brightness, request.thumbnail_contrast
@@ -584,12 +825,68 @@ class PackagingOptimizerService:
         request: VASEvalRequestDTO,
         db: Optional[Session] = None
     ) -> Composite8FactorScoreDTO:
-        """Generate 8-factor composite spider score breakdown for video packaging and market fit."""
+        """Generate 8-factor composite spider score breakdown for video packaging and market fit.
+        Enhanced with Gemini AI market & competitive intelligence with fallback to heuristics.
+        """
+        ai_data = None
+        escaped_title = request.title.replace('"', '\\"')
+        escaped_hook = request.hook_script.replace('"', '\\"')
+        b_val = request.thumbnail_brightness if request.thumbnail_brightness is not None else 0.6
+        c_val = request.thumbnail_contrast if request.thumbnail_contrast is not None else 0.7
+
+        prompt = f"""
+        Act as a YouTube algorithmic growth engineer and market intelligence analyst.
+        Evaluate this video concept across exactly 8 distinct packaging and market-fit dimensions:
+        - Title: "{escaped_title}"
+        - Opening 30s Hook: "{escaped_hook}"
+        - Thumbnail Brightness (0.0-1.0): {b_val}
+        - Thumbnail Contrast (0.0-1.0): {c_val}
+
+        Evaluate the real market search demand, competitive saturation, and velocity momentum for this niche topic.
+        Return strictly valid JSON with no markdown formatting:
+        {{
+            "factors": [
+                {{"factor_key": "title_ctr_potential", "factor_name": "Title CTR Potential", "score": 90.0, "weight": 0.15, "description": "Concise analysis of title curiosity and hook"}},
+                {{"factor_key": "thumbnail_visual_impact", "factor_name": "Thumbnail Visual Impact", "score": 85.0, "weight": 0.15, "description": "Contrast and visual pop on feed"}},
+                {{"factor_key": "thumbnail_legibility", "factor_name": "Thumbnail Legibility", "score": 88.0, "weight": 0.10, "description": "Mobile screen text legibility"}},
+                {{"factor_key": "hook_pacing_retention", "factor_name": "Hook Script Pacing", "score": 90.0, "weight": 0.15, "description": "First 30s speech delivery pacing"}},
+                {{"factor_key": "emotional_hook_intensity", "factor_name": "Emotional Hook Intensity", "score": 82.0, "weight": 0.10, "description": "Emotional trigger and curiosity gap strength"}},
+                {{"factor_key": "market_demand_index", "factor_name": "Market Demand Index", "score": 92.0, "weight": 0.12, "description": "Search volume and viewer demand"}},
+                {{"factor_key": "competition_gap_advantage", "factor_name": "Competition Gap Advantage", "score": 84.0, "weight": 0.11, "description": "Niche competition whitespace"}},
+                {{"factor_key": "trend_velocity_momentum", "factor_name": "Trend Velocity Momentum", "score": 91.0, "weight": 0.12, "description": "Viewer trend momentum and trajectory"}}
+            ]
+        }}
+        """
+        try:
+            ai_data = cls._call_gemini_json(prompt)
+        except Exception as e:
+            logger.debug(f"Gemini composite 8-factor failed, falling back: {e}")
+
+        if isinstance(ai_data, dict) and "factors" in ai_data and len(ai_data["factors"]) == 8:
+            try:
+                factors = [
+                    FactorScoreDTO(
+                        factor_key=f["factor_key"],
+                        factor_name=f["factor_name"],
+                        score=round(float(f["score"]), 1),
+                        weight=float(f.get("weight", 0.125)),
+                        description=f["description"]
+                    )
+                    for f in ai_data["factors"]
+                ]
+                composite_score = round(sum(f.score * f.weight for f in factors), 1)
+                return Composite8FactorScoreDTO(
+                    composite_overall_score=composite_score,
+                    factors=factors
+                )
+            except Exception as parse_err:
+                logger.debug(f"Failed to parse Gemini 8-factor DTOs, falling back: {parse_err}")
+
+        # Fallback to heuristic computation
         title_score = cls.calculate_title_score(request.title)
         thumb_diag = cls.analyze_thumbnail_vision(request.thumbnail_brightness, request.thumbnail_contrast)
         hook_diag = cls.analyze_hook_retention(request.hook_script)
 
-        # 1. title_ctr_potential
         f1 = FactorScoreDTO(
             factor_key="title_ctr_potential",
             factor_name="Title CTR Potential",
@@ -597,8 +894,6 @@ class PackagingOptimizerService:
             weight=0.15,
             description="NLP score based on curiosity/power word density & length optimization"
         )
-
-        # 2. thumbnail_visual_impact
         f2 = FactorScoreDTO(
             factor_key="thumbnail_visual_impact",
             factor_name="Thumbnail Visual Impact",
@@ -606,8 +901,6 @@ class PackagingOptimizerService:
             weight=0.15,
             description="Visual contrast and luminance attraction score"
         )
-
-        # 3. thumbnail_legibility
         f3 = FactorScoreDTO(
             factor_key="thumbnail_legibility",
             factor_name="Thumbnail Legibility",
@@ -615,8 +908,6 @@ class PackagingOptimizerService:
             weight=0.10,
             description="Text contrast and readability grade on mobile screens"
         )
-
-        # 4. hook_pacing_retention
         f4 = FactorScoreDTO(
             factor_key="hook_pacing_retention",
             factor_name="Hook Script Pacing",
@@ -624,8 +915,6 @@ class PackagingOptimizerService:
             weight=0.15,
             description="Opening 30s speech pace (60-90 words optimal)"
         )
-
-        # 5. emotional_hook_intensity
         f5 = FactorScoreDTO(
             factor_key="emotional_hook_intensity",
             factor_name="Emotional Hook Intensity",
@@ -633,8 +922,6 @@ class PackagingOptimizerService:
             weight=0.10,
             description="Emotional word density and call-to-action presence"
         )
-
-        # 6. market_demand_index
         demand_score = min(100.0, max(50.0, 70.0 + len(request.title) * 0.3))
         f6 = FactorScoreDTO(
             factor_key="market_demand_index",
@@ -643,8 +930,6 @@ class PackagingOptimizerService:
             weight=0.12,
             description="Viewer search volume and category topic demand"
         )
-
-        # 7. competition_gap_advantage
         comp_score = 78.5
         f7 = FactorScoreDTO(
             factor_key="competition_gap_advantage",
@@ -653,8 +938,6 @@ class PackagingOptimizerService:
             weight=0.11,
             description="Unsaturated content niche positioning advantage"
         )
-
-        # 8. trend_velocity_momentum
         velocity_score = 82.0
         f8 = FactorScoreDTO(
             factor_key="trend_velocity_momentum",
@@ -757,7 +1040,9 @@ class PackagingOptimizerService:
         request: ABPackagingRequestDTO,
         db: Optional[Session] = None
     ) -> ABPackagingMatrixResponseDTO:
-        """Evaluates multiple title/thumbnail packaging variants side-by-side."""
+        """Evaluates multiple title/thumbnail packaging variants side-by-side.
+        Enhanced with Gemini AI head-to-head tournament comparison and fallback to heuristics.
+        """
         if not request.variants:
             return ABPackagingMatrixResponseDTO(
                 winning_variant_id="none",
@@ -766,16 +1051,97 @@ class PackagingOptimizerService:
                 comparison_summary="No variants provided for A/B packaging evaluation."
             )
 
-        evaluated_variants: List[ABPackagingResultDTO] = []
+        ai_data = None
+        variants_summary = []
+        for v in request.variants:
+            variants_summary.append({
+                "variant_id": v.variant_id,
+                "variant_label": v.variant_label,
+                "title": v.title,
+                "hook_script": v.hook_script,
+                "thumbnail_brightness": v.thumbnail_brightness if v.thumbnail_brightness is not None else 0.6,
+                "thumbnail_contrast": v.thumbnail_contrast if v.thumbnail_contrast is not None else 0.7
+            })
+
+        prompt = f"""
+        Act as a YouTube viral packaging consultant and A/B split-testing strategist.
+        Conduct an objective head-to-head comparative evaluation between these candidate packaging variants:
+        {json.dumps(variants_summary, indent=2)}
+
+        For each variant:
+        1. Rate title CTR potential (0.0-100.0), thumbnail pop (0.0-100.0), and 30s hook retention (0.0-100.0).
+        2. Calculate overall VAS (weighted: 0.40*title + 0.35*thumbnail + 0.25*hook).
+        3. Identify the true winning variant and specific psychological key advantage (e.g. why one title/hook wins over others).
+        4. Predict estimated CTR uplift percentage for the winning variant over the baseline/lowest variant (e.g. +10.0% to +35.0%).
+        5. Write an insightful 2-sentence comparison summary explaining the trade-offs.
+
+        Return strictly valid JSON with no markdown formatting:
+        {{
+            "winning_variant_id": "<variant_id of the winner>",
+            "best_overall_vas": 90.0,
+            "comparison_summary": "<executive summary of why the winner outperformed other variants>",
+            "variants": [
+                {{
+                    "variant_id": "<id>",
+                    "variant_label": "<label>",
+                    "title": "<title>",
+                    "overall_vas": 90.0,
+                    "title_score": 90.0,
+                    "thumbnail_score": 90.0,
+                    "hook_score": 90.0,
+                    "is_winner": true,
+                    "predicted_ctr_uplift_pct": 15.0,
+                    "key_advantage": "<deep contextual driver of this variant's CTR/retention>",
+                    "recommendations": ["<recommendation>"]
+                }}
+            ]
+        }}
+        """
+        try:
+            ai_data = cls._call_gemini_json(prompt)
+        except Exception as e:
+            logger.debug(f"Gemini A/B packaging evaluation failed, falling back: {e}")
+
+        if isinstance(ai_data, dict) and "winning_variant_id" in ai_data and "variants" in ai_data and len(ai_data["variants"]) > 0:
+            try:
+                evaluated_variants = [
+                    ABPackagingResultDTO(
+                        variant_id=v["variant_id"],
+                        variant_label=v.get("variant_label", ""),
+                        title=v.get("title", ""),
+                        overall_vas=round(float(v.get("overall_vas", 50.0)), 1),
+                        title_score=round(float(v.get("title_score", 50.0)), 1),
+                        thumbnail_score=round(float(v.get("thumbnail_score", 55.0)), 1),
+                        hook_score=round(float(v.get("hook_score", 45.0)), 1),
+                        is_winner=bool(v.get("is_winner", False)),
+                        predicted_ctr_uplift_pct=round(float(v.get("predicted_ctr_uplift_pct", 0.0)), 1),
+                        key_advantage=v.get("key_advantage", "High curiosity title"),
+                        recommendations=v.get("recommendations", [])
+                    )
+                    for v in ai_data["variants"]
+                ]
+                winning_id = str(ai_data.get("winning_variant_id", evaluated_variants[0].variant_id))
+                best_vas = round(float(ai_data.get("best_overall_vas", max(v.overall_vas for v in evaluated_variants))), 1)
+                summary = str(ai_data.get("comparison_summary", ""))
+
+                return ABPackagingMatrixResponseDTO(
+                    winning_variant_id=winning_id,
+                    best_overall_vas=best_vas,
+                    variants=evaluated_variants,
+                    comparison_summary=summary
+                )
+            except Exception as parse_err:
+                logger.debug(f"Failed to parse Gemini A/B response, falling back: {parse_err}")
+
+        # Fallback to rule-based evaluation
+        evaluated_variants = []
         for v in request.variants:
             t_score = cls.calculate_title_score(v.title)
             thumb_score = cls.calculate_thumbnail_score(v.thumbnail_brightness, v.thumbnail_contrast)
             h_score = cls.calculate_hook_score(v.hook_script)
             vas = cls.calculate_vas(t_score, thumb_score, h_score)
-
             recs = cls.generate_recommendations(t_score, thumb_score, h_score)
-            
-            # Key advantage analysis
+
             if t_score >= thumb_score and t_score >= h_score:
                 advantage = f"High curiosity title keyword density (+{t_score:.0f}% CTR driver)"
             elif thumb_score >= h_score:
@@ -797,7 +1163,6 @@ class PackagingOptimizerService:
                 recommendations=recs
             ))
 
-        # Determine winning variant
         evaluated_variants.sort(key=lambda x: x.overall_vas, reverse=True)
         winner = evaluated_variants[0]
         winner.is_winner = True
@@ -824,10 +1189,82 @@ class PackagingOptimizerService:
         cls,
         request: HookGenerationRequestDTO
     ) -> HookGenerationResponseDTO:
-        """Synthesizes 3 high-retention 30s opening hook script options (60-90 words)."""
+        """Synthesizes 3 high-retention 30s opening hook script options (60-90 words).
+        Enhanced with Gemini AI script generation and fallback to templates.
+        """
         base_title = request.title.strip().rstrip(".")
         topic = request.topic or base_title
+        audience = request.target_audience or "YouTube Viewers"
 
+        ai_data = None
+        escaped_title = request.title.replace('"', '\\"')
+        escaped_topic = topic.replace('"', '\\"')
+        escaped_audience = audience.replace('"', '\\"')
+
+        prompt = f"""
+        Act as a professional YouTube retention scriptwriter who has written viral hooks for top creators.
+        Write exactly 3 distinct, high-retention opening 30-second hook scripts (approx 35-80 words each) for:
+        - Video Title: "{escaped_title}"
+        - Topic: "{escaped_topic}"
+        - Target Audience: "{escaped_audience}"
+
+        The 3 styles must be:
+        1. "Curiosity Gap" — Opens with an intriguing question or counter-intuitive truth.
+        2. "Pain Point / Mistake" — Directly calls out a costly mistake or painful friction.
+        3. "Story & Challenge Hook" — Opens with personal transformation, experiment, or bold test.
+
+        Return strictly valid JSON with no markdown formatting:
+        {{
+            "hooks": [
+                {{
+                    "hook_style": "Curiosity Gap",
+                    "script_text": "Sample curiosity gap script text here.",
+                    "word_count": 40,
+                    "estimated_retention_pct": 92.0,
+                    "pacing_notes": "Fast opening delivery notes."
+                }},
+                {{
+                    "hook_style": "Pain Point / Mistake",
+                    "script_text": "Sample pain point script text here.",
+                    "word_count": 38,
+                    "estimated_retention_pct": 94.0,
+                    "pacing_notes": "Direct negative hook delivery notes."
+                }},
+                {{
+                    "hook_style": "Story & Challenge Hook",
+                    "script_text": "Sample story challenge script text here.",
+                    "word_count": 35,
+                    "estimated_retention_pct": 89.0,
+                    "pacing_notes": "Narrative pacing delivery notes."
+                }}
+            ]
+        }}
+        """
+        try:
+            ai_data = cls._call_gemini_json(prompt)
+        except Exception as e:
+            logger.debug(f"Gemini hook script generation failed, falling back: {e}")
+
+        if isinstance(ai_data, dict) and "hooks" in ai_data and len(ai_data["hooks"]) >= 3:
+            try:
+                hooks = [
+                    HookScriptOptionDTO(
+                        hook_style=h.get("hook_style", "High Retention Hook"),
+                        script_text=h["script_text"],
+                        word_count=int(h.get("word_count", len(h["script_text"].split()))),
+                        estimated_retention_pct=round(float(h.get("estimated_retention_pct", 88.0)), 1),
+                        pacing_notes=h.get("pacing_notes", "Maintain natural delivery pace.")
+                    )
+                    for h in ai_data["hooks"][:3]
+                ]
+                return HookGenerationResponseDTO(
+                    title=request.title,
+                    hooks=hooks
+                )
+            except Exception as parse_err:
+                logger.debug(f"Failed to parse Gemini hook options, falling back: {parse_err}")
+
+        # Fallback to template scripts
         h1 = HookScriptOptionDTO(
             hook_style="Curiosity Gap",
             script_text=(

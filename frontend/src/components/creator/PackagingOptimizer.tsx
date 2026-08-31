@@ -290,43 +290,43 @@ export const PackagingOptimizer: React.FC = () => {
     : 'text-[#606060]';
 
   return (
-    <Card className="rounded-2xl border border-[#dbdbdb] dark:border-[#272727] bg-white dark:bg-[#1f1f1f] p-6 lg:p-8 shadow-yt-sm hover:shadow-yt-md relative">
+    <Card className="rounded-[32px] border border-zinc-200/80 dark:border-zinc-800/80 bg-white/95 dark:bg-zinc-900/90 backdrop-blur-xl p-6 lg:p-10 shadow-xl relative">
       {/* Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#ffcccc]/60 dark:bg-[#e1002d]/20 text-[#e1002d] flex items-center justify-center border border-[#e1002d]/20">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center border border-emerald-500/20 shadow-xs">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-headline text-xl lg:text-2xl font-bold text-[#0f0f0f] dark:text-white">Pre-Publish Packaging Optimizer</h3>
-            <p className="text-xs text-[#606060] dark:text-[#aaaaaa]">Closed-Loop VAS Engine with Direct Computer Vision & 8-Factor Spider Radar</p>
+            <h3 className="font-black text-xl lg:text-2xl text-zinc-900 dark:text-white tracking-tight">Pre-Publish Packaging Optimizer</h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Closed-Loop VAS Engine with Computer Vision & 8-Factor Spider Radar</p>
           </div>
         </div>
 
         {/* View Mode Toggle & Telemetry Trigger */}
-        <div className="flex items-center gap-3">
-          <div className="p-1 rounded-full bg-[#eeeeee] dark:bg-[#272727] border border-[#dbdbdb] dark:border-[#3f3f3f] flex text-xs font-medium">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="p-1 rounded-full bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700/80 flex text-xs font-semibold shadow-xs">
             <button
               onClick={() => setActiveView('QUICK')}
-              className={`px-3 py-1.5 rounded-full transition-all duration-200 ${activeView === 'QUICK' ? 'bg-[#e1002d] text-white shadow-sm font-semibold' : 'text-[#606060] dark:text-[#aaaaaa] hover:text-[#0f0f0f] dark:hover:text-white'}`}
+              className={`px-3.5 py-1.5 rounded-full transition-all duration-200 ${activeView === 'QUICK' ? 'bg-emerald-500 text-white shadow-xs font-bold' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'}`}
             >
               Quick Score
             </button>
             <button
               onClick={() => setActiveView('DETAILED')}
-              className={`px-3 py-1.5 rounded-full transition-all duration-200 ${activeView === 'DETAILED' ? 'bg-[#e1002d] text-white shadow-sm font-semibold' : 'text-[#606060] dark:text-[#aaaaaa] hover:text-[#0f0f0f] dark:hover:text-white'}`}
+              className={`px-3.5 py-1.5 rounded-full transition-all duration-200 ${activeView === 'DETAILED' ? 'bg-emerald-500 text-white shadow-xs font-bold' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'}`}
             >
               Deep Analysis
             </button>
             <button
               onClick={() => setActiveView('COMPOSITE')}
-              className={`px-3 py-1.5 rounded-full transition-all duration-200 ${activeView === 'COMPOSITE' ? 'bg-[#e1002d] text-white shadow-sm font-semibold' : 'text-[#606060] dark:text-[#aaaaaa] hover:text-[#0f0f0f] dark:hover:text-white'}`}
+              className={`px-3.5 py-1.5 rounded-full transition-all duration-200 ${activeView === 'COMPOSITE' ? 'bg-emerald-500 text-white shadow-xs font-bold' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'}`}
             >
               8-Factor Radar
             </button>
             <button
               onClick={() => setActiveView('AB_MATRIX')}
-              className={`px-3 py-1.5 rounded-full transition-all duration-200 ${activeView === 'AB_MATRIX' ? 'bg-[#e1002d] text-white shadow-sm font-semibold' : 'text-[#606060] dark:text-[#aaaaaa] hover:text-[#0f0f0f] dark:hover:text-white'}`}
+              className={`px-3.5 py-1.5 rounded-full transition-all duration-200 ${activeView === 'AB_MATRIX' ? 'bg-emerald-500 text-white shadow-xs font-bold' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'}`}
             >
               A/B Matrix
             </button>
@@ -334,9 +334,9 @@ export const PackagingOptimizer: React.FC = () => {
 
           <button
             onClick={() => setIsSyncModalOpen(true)}
-            className="h-9 px-3.5 rounded-full bg-[#eeeeee] dark:bg-[#272727] hover:bg-[#e8e8e8] dark:hover:bg-[#383838] border border-[#dbdbdb] dark:border-[#3f3f3f] text-[#0f0f0f] dark:text-[#f1f1f1] text-xs font-medium transition-all flex items-center gap-1.5"
+            className="h-9 px-3.5 rounded-full bg-zinc-50 dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs"
           >
-            <Cpu className="w-3.5 h-3.5 text-[#e1002d]" />
+            <Cpu className="w-3.5 h-3.5 text-emerald-500" />
             Sync Telemetry
           </button>
         </div>

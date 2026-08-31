@@ -70,13 +70,14 @@ def test_websocket_velocity_broadcast_on_live_stream():
         response = client.post("/api/v1/sync/stream", json=payload)
         assert response.status_code == 200
 
-        # Receive broadcasts
+        # Receive broadcasts (WATCH_UPDATE, ALIGNMENT_UPDATE, VELOCITY_UPDATE)
         messages = []
-        for _ in range(2):
+        for _ in range(3):
             messages.append(websocket.receive_json())
 
         msg_types = [m["type"] for m in messages]
         assert "WATCH_UPDATE" in msg_types
+        assert "ALIGNMENT_UPDATE" in msg_types
         assert "VELOCITY_UPDATE" in msg_types
 
         vel_msg = next(m for m in messages if m["type"] == "VELOCITY_UPDATE")
