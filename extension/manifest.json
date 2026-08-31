@@ -22,7 +22,12 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["http://localhost/*", "http://127.0.0.1/*"],
+      "matches": [
+        "http://localhost/*",
+        "http://localhost:5173/*",
+        "http://127.0.0.1/*",
+        "http://127.0.0.1:5173/*"
+      ],
       "js": ["dashboard-sync.js"],
       "run_at": "document_start"
     }

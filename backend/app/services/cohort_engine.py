@@ -82,10 +82,10 @@ class CohortEngine:
         gemini_key = user_api_key or settings.GEMINI_API_KEY or settings.YOUTUBE_API_KEY
         if gemini_key:
             candidate_models = [
-                "gemini-3.1-flash-lite",
-                "gemini-3.5-flash-lite",
-                "gemini-2.5-flash",
-                "gemini-1.5-flash"
+                "gemini-3.6-flash",
+                "gemini-3.5-flash",
+                "gemini-flash-latest",
+                "gemini-3.7-flash"
             ]
             prompt = f"""
             Act as an AI learning analyst. Analyze this user's YouTube watch analytics:
@@ -98,7 +98,13 @@ class CohortEngine:
             Generate 3 short, actionable, bullet-point insights (1 sentence each) tailored specifically to their metrics.
             Return strictly a JSON array of 3 strings without markdown formatting.
             """
-            payload = {"contents": [{"parts": [{"text": prompt}]}]}
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "responseMimeType": "application/json",
+                    "temperature": 0.2
+                }
+            }
 
             for model_name in candidate_models:
                 try:

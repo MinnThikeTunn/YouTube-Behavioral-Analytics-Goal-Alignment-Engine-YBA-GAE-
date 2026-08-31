@@ -47,15 +47,15 @@ def execute_processing_pipeline(job_id: str, file_path: str):
         job.progress_pct = 10.0
         db.commit()
 
-        emit_job_log(db, job_id, "INGESTION", "INFO", "Started parsing YouTube Takeout watch history JSON file.")
+        emit_job_log(db, job_id, "INGESTION", "INFO", "Started parsing YouTube watch history stream.")
 
         with open(file_path, "r", encoding="utf-8") as f:
             raw_records = json.load(f)
 
         if not isinstance(raw_records, list):
-            raise ValueError("Uploaded watch history file must contain a JSON array/list of records.")
+            raise ValueError("Uploaded watch history records must contain a list of records.")
 
-        emit_job_log(db, job_id, "INGESTION", "INFO", f"Loaded raw JSON file with {len(raw_records):,} total entries. Initiating regex entry classification.")
+        emit_job_log(db, job_id, "INGESTION", "INFO", f"Loaded records with {len(raw_records):,} total entries. Initiating regex entry classification.")
 
         classified_records, counts = EntryClassifier.process_and_classify_records(raw_records)
 
@@ -73,7 +73,7 @@ def execute_processing_pipeline(job_id: str, file_path: str):
         ]
         db.bulk_insert_mappings(RawRecord, raw_mappings)
 
-        # Instant local cache seeding directly from Takeout metadata (100% cache hit guarantee)
+        # Instant local cache seeding directly from video metadata (100% cache hit guarantee)
         existing_vids = {v[0] for v in db.query(EnrichedVideo.video_id).all()}
         existing_cids = {c[0] for c in db.query(EnrichedChannel.channel_id).all()}
 

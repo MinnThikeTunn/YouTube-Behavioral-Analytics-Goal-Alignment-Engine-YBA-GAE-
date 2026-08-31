@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Dark background container for high-contrast on light/dark tab bars -->
+  <rect width="32" height="32" rx="8" fill="#0f0f0f" />
+  <!-- White Rectangle -->
+  <path
+    d="M27.498 10.186a3.016 3.016 0 0 0-2.122-2.136C23.505 7.545 16 7.545 16 7.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 4.502 10.186C4 12.07 4 16 4 16s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C28 19.93 28 16 28 16s0-3.93-.502-5.814z"
+    fill="#ffffff"
+  />
+  <!-- Red Triangle -->
+  <path
+    d="M13.545 19.568V12.432L19.818 16l-6.273 3.568z"
+    fill="#e1002d"
+  />
+</svg>

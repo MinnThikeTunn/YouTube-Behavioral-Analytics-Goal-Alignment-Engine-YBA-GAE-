@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Header } from './components/common/Header';
 import { DashboardPage } from './components/dashboard/DashboardPage';
 import { GoalSetupPage } from './components/dashboard/GoalSetupPage';
@@ -26,6 +26,7 @@ export const App: React.FC = () => {
   const [cohortAnalytics, setCohortAnalytics] = useState<any>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState<boolean>(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
+  const refreshDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const [completedJob] = useState<JobStatusResponseDTO>({
     job_id: 'stream_job_default',
@@ -46,8 +47,10 @@ export const App: React.FC = () => {
     }
   }, [darkMode]);
 
-  const loadAnalyticsData = useCallback(async (jobId: string = 'stream_job_default') => {
-    setLoadingAnalytics(true);
+  const loadAnalyticsData = useCallback(async (jobId: string = 'stream_job_default', silent: boolean = false) => {
+    if (!silent) {
+      setLoadingAnalytics(true);
+    }
     try {
       const [data, velocityData, cohortData] = await Promise.all([
         getAnalyticsResults(jobId),
@@ -64,7 +67,9 @@ export const App: React.FC = () => {
     } catch (err) {
       console.error('Failed to fetch analytics results:', err);
     } finally {
-      setLoadingAnalytics(false);
+      if (!silent) {
+        setLoadingAnalytics(false);
+      }
     }
   }, []);
 
@@ -84,14 +89,22 @@ export const App: React.FC = () => {
         (event.data.type === 'YBA_GOAL_SYNC' || event.data.type === 'YBA_GOAL_INITIAL_SYNC') &&
         event.data.goal
       ) {
-        setCurrentGoal(event.data.goal);
-        localStorage.setItem('yba_user_goal', event.data.goal);
+        const syncedGoal = event.data.goal.trim();
+        if (syncedGoal && syncedGoal !== currentGoal) {
+          setCurrentGoal(syncedGoal);
+          localStorage.setItem('yba_user_goal', syncedGoal);
+          if (event.data.type === 'YBA_GOAL_SYNC') {
+            updateJobGoal('stream_job_default', syncedGoal)
+              .then(() => loadAnalyticsData('stream_job_default', true))
+              .catch((err) => console.warn('Could not sync goal from extension to backend:', err));
+          }
+        }
       }
     };
 
     window.addEventListener('message', handleGoalMessage);
     return () => window.removeEventListener('message', handleGoalMessage);
-  }, [viewMode, analytics, loadAnalyticsData]);
+  }, [viewMode, analytics, loadAnalyticsData, currentGoal]);
 
   useEffect(() => {
     let ws: WebSocket | null = null;
@@ -103,13 +116,29 @@ export const App: React.FC = () => {
       ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
-          if (msg.type === 'VELOCITY_UPDATE' && msg.data) {
+          if (msg.type === 'ALIGNMENT_UPDATE' && msg.data) {
+            setAnalytics((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                alignment_score: msg.data.alignment_score ?? prev.alignment_score,
+                metrics: msg.data.metrics ? { ...prev.metrics, ...msg.data.metrics } : prev.metrics,
+              };
+            });
+          } else if (msg.type === 'VELOCITY_UPDATE' && msg.data) {
             setVelocityAnalytics({
               job_id: msg.data.job_id,
               overall_v_cog: msg.data.overall_v_cog,
               sessions: msg.data.sessions,
               fatigue_windows: msg.data.fatigue_windows
             });
+          } else if (msg.type === 'WATCH_UPDATE') {
+            if (refreshDebounceRef.current) {
+              clearTimeout(refreshDebounceRef.current);
+            }
+            refreshDebounceRef.current = setTimeout(() => {
+              loadAnalyticsData('stream_job_default', true);
+            }, 800);
           }
         } catch (e) {
           // ignore
@@ -120,8 +149,9 @@ export const App: React.FC = () => {
     }
     return () => {
       if (ws) ws.close();
+      if (refreshDebounceRef.current) clearTimeout(refreshDebounceRef.current);
     };
-  }, []);
+  }, [loadAnalyticsData]);
 
   const handleSaveGoal = async (newGoal: string) => {
     setCurrentGoal(newGoal);

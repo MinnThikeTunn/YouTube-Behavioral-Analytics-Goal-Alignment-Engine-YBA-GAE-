@@ -32,7 +32,7 @@ def get_job_status(job_id: str, db: Session = Depends(get_db)):
     )
 
 @router.patch("/jobs/{job_id}/goal")
-def update_job_goal(job_id: str, payload: GoalUpdateDTO, db: Session = Depends(get_db)):
+async def update_job_goal(job_id: str, payload: GoalUpdateDTO, db: Session = Depends(get_db)):
     job = get_job_or_create_default(db, job_id)
     if not job:
         raise HTTPException(
@@ -48,10 +48,12 @@ def update_job_goal(job_id: str, payload: GoalUpdateDTO, db: Session = Depends(g
     from app.db.models import RecommendedChannel
     from app.services.goal_alignment import GoalAlignmentEngine, RecommendationEngine
     from app.services.dag_engine import DAGEngine
+    from app.services.broadcaster import broadcaster
 
     db.query(RecommendedChannel).filter(RecommendedChannel.job_id == job_id).delete()
     db.commit()
 
+    score_orm = None
     try:
         RecommendationEngine.generate_and_save_recommendations(
             db=db,
@@ -59,12 +61,18 @@ def update_job_goal(job_id: str, payload: GoalUpdateDTO, db: Session = Depends(g
             goal_text=job.goal_text,
             user_api_key=job.user_api_key
         )
+        score_orm = job.alignment_score
     except Exception as e:
-        GoalAlignmentEngine.evaluate_job_alignment(db, job_id, job.goal_text)
+        score_orm, _ = GoalAlignmentEngine.evaluate_job_alignment(db, job_id, job.goal_text)
 
     try:
         DAGEngine.build_dag_for_job(db, job_id)
     except Exception as e:
+        pass
+
+    try:
+        await broadcaster.broadcast_alignment_update(job.id, score_orm or job.alignment_score, job.computed_metrics)
+    except Exception:
         pass
 
     return {

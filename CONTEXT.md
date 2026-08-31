@@ -3,14 +3,14 @@
 ## Glossary & System Terminology
 
 ### Core Domain Entities
-- **Watch History Export (`watch-history.json`)**: Raw JSON export provided by Google Takeout containing video click timestamps, titles, and title URLs.
-- **Job (`Job`)**: An asynchronous processing session tracking file parsing, entry classification, API enrichment progress, and analytical metric computation.
+- **Live Extension Telemetry Stream**: Real-time video watch events streamed directly from the Chrome/browser extension (`/api/v1/sync/stream` and `/api/v1/sync/stream/batch`) capturing video ID, title, channel name, dwell time, and navigation timestamps.
+- **Job (`Job`)**: An analytics session tracking real-time telemetry streams, semantic vector embeddings, behavioral proxy metrics, and Creator Intelligence analytics.
 
 ### Entry Classification Types
-- **Video Event**: A `watch-history.json` record with `titleUrl` containing `watch?v=`. The only record type eligible for timestamp-gap calculations and YouTube Data API v3 metadata enrichment.
-- **Community Post**: Activity with `titleUrl` containing `/post/` or title starting with "Viewed" without a video ID. Strictly excluded before timestamp-gap computation to prevent artificial zero-gap inflation.
-- **Ad Impression**: Promotional homepage/banner records. Filtered out entirely.
-- **Non-Viewing Activity**: App interactions (e.g. Shorts creation tools, external URL click-throughs). Filtered out.
+- **Video Event**: A live YouTube video watch event containing a valid `video_id`. Eligible for inter-click gap calculations, semantic vector scoring, and YouTube Data API v3 metadata enrichment.
+- **Community Post**: Community tab interactions without a video ID. Excluded before timestamp-gap computation to prevent artificial zero-gap inflation.
+- **Ad Impression**: Promotional homepage/banner records filtered out from cognitive velocity calculations.
+- **Non-Viewing Activity**: App interactions (e.g. Shorts creation tools, external URL click-throughs) filtered out.
 - **Inaccessible Video**: Video event where `videos.list` returns no metadata (deleted or private video). Excluded from metadata enrichment but retained in raw activity counts.
 
 ### Proxy Metrics
@@ -26,7 +26,7 @@
 
 ### Recommendation Entities
 - **Hybrid Recommendation Engine**: Dual-stream recommendation system combining vector cosine similarity ranking on past watch history (`Watched Channels`) with LLM/curated discovery (`New Discovery`).
-- **Watched Channel Recommendation**: Internal ranking of channels existing within the user's `watch-history.json`, evaluated by calculating vector embedding similarities between the target goal and channel title/descriptions.
+- **Watched Channel Recommendation**: Internal ranking of channels existing within the user's live stream history, evaluated by calculating vector embedding similarities between the target goal and channel title/descriptions.
 - **New Discovery Recommendation**: External channel suggestions generated via Gemini API (or domain fallback) for target goals, cached globally by `goal_text` to enforce single-invocation efficiency across multiple jobs.
 
 ### Intervention & Nudge Entities

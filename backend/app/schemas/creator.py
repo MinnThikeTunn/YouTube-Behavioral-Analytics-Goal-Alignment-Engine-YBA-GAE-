@@ -52,4 +52,6 @@ class ChannelIntentDistributionDTO(BaseModel):
     top_feature_requests: List[str]
     top_confusion_points: List[str]
     channel_sentiment_index: float
+    mined_comments: Optional[List[MinedCommentDTO]] = []
+
 

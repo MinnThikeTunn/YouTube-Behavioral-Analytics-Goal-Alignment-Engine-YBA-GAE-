@@ -89,10 +89,12 @@ def get_closed_loop_telemetry(db: Session = Depends(get_db)):
 
 
 @router.get("/trends", response_model=NicheTrendRadarResponseDTO)
-def get_niche_trends():
-    """Discover real-time trending topics and trajectory velocities via dynamic search."""
+def get_niche_trends(
+    goal: Optional[str] = Query(None, description="Active user goal to align market trends with")
+):
+    """Discover real-time trending topics and trajectory velocities aligned with user goal."""
     engine = TrendRadarEngine()
-    return engine.fetch_dynamic_niche_trends()
+    return engine.fetch_dynamic_niche_trends(goal=goal)
 
 @router.post("/comments", response_model=CommentMiningResponseDTO)
 def mine_video_comments(request: CommentMiningRequestDTO, db: Session = Depends(get_db)):
@@ -127,8 +129,11 @@ def get_video_comments(video_id: str, max_results: int = Query(100), db: Session
     )
 
 @router.get("/opportunity", response_model=ContentGapMatrixResponseDTO)
-def get_video_opportunities():
+def get_video_opportunities(
+    goal: Optional[str] = Query(None, description="Active user goal to align content opportunities with")
+):
     """Calculate dynamic opportunity matrix and AI title recommendations aligned with user goals."""
     engine = OpportunityEngine()
-    return engine.fetch_dynamic_opportunities()
+    return engine.fetch_dynamic_opportunities(goal=goal)
+
 

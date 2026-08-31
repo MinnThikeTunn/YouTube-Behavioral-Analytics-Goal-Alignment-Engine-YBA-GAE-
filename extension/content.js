@@ -328,11 +328,36 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 syncSettings();
 initOverlay();
 
-function scrapeDOM() {
-    const videoTitle = document.querySelector('h1.ytd-video-primary-info-renderer, h1.ytd-watch-metadata, #title h1, yt-formatted-string.style-scope.ytd-watch-metadata')?.innerText || "";
-    const channelName = document.querySelector('ytd-channel-name yt-formatted-string, #channel-name yt-formatted-string, #owner #channel-name, #text.ytd-channel-name')?.innerText || "";
+function getVideoId() {
     const urlParams = new URLSearchParams(window.location.search);
-    const videoId = urlParams.get('v') || 'unknown_video';
+    let videoId = urlParams.get('v');
+    if (!videoId) {
+        const path = window.location.pathname;
+        const match = path.match(/\/(shorts|live|embed)\/([a-zA-Z0-9_-]+)/);
+        if (match && match[2]) {
+            videoId = match[2];
+        }
+    }
+    return videoId || 'unknown_video';
+}
+
+function scrapeDOM() {
+    let videoTitle = document.querySelector(
+        'h1.ytd-video-primary-info-renderer, h1.ytd-watch-metadata, #title h1, yt-formatted-string.style-scope.ytd-watch-metadata, h2.ytd-reel-player-header-renderer'
+    )?.innerText || "";
+
+    if (!videoTitle && document.title) {
+        const cleaned = document.title.replace(/\s*-\s*YouTube$/, '').trim();
+        if (cleaned && cleaned.toLowerCase() !== 'youtube') {
+            videoTitle = cleaned;
+        }
+    }
+
+    const channelName = document.querySelector(
+        'ytd-channel-name yt-formatted-string, #channel-name yt-formatted-string, #owner #channel-name, #text.ytd-channel-name, ytd-reel-player-header-renderer #channel-name'
+    )?.innerText || "";
+
+    const videoId = getVideoId();
     
     return { 
         job_id: activeJobId,
@@ -348,8 +373,12 @@ function scrapeDOM() {
 function sendTelemetry() {
     if (isPaused) return; // Skip telemetry when paused
     const data = scrapeDOM();
+    if (!data.video_id || data.video_id === 'unknown_video') return; // Don't send telemetry on non-video pages
     chrome.runtime.sendMessage({ type: "TELEMETRY", data });
 }
+
+// Immediate trigger on script load (with 800ms debounce for DOM to settle)
+setTimeout(sendTelemetry, 800);
 
 // 5s telemetry heartbeat loop
 setInterval(sendTelemetry, 5000);
@@ -357,5 +386,6 @@ setInterval(sendTelemetry, 5000);
 // yt-navigate-finish observer
 document.addEventListener('yt-navigate-finish', (event) => {
     console.log("yt-navigate-finish triggered");
-    sendTelemetry();
+    setTimeout(sendTelemetry, 500);
 });
+

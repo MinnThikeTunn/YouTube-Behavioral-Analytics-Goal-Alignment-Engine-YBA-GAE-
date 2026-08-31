@@ -22,6 +22,7 @@ def test_analytics_result_returns_dynamic_goal_text(db_session):
     assert res.goal_text == "AI and data science"
 
 def test_update_job_goal_endpoint(db_session):
+    import asyncio
     from app.api.v1.jobs import update_job_goal
     from app.schemas.job import GoalUpdateDTO
 
@@ -29,7 +30,7 @@ def test_update_job_goal_endpoint(db_session):
     db_session.add(job)
     db_session.commit()
 
-    res = update_job_goal("job_update_1", GoalUpdateDTO(goal_text="Updated Goal Text"), db=db_session)
+    res = asyncio.run(update_job_goal("job_update_1", GoalUpdateDTO(goal_text="Updated Goal Text"), db=db_session))
     assert res["status"] == "success"
     assert res["goal_text"] == "Updated Goal Text"
 

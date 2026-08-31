@@ -1,38 +1,47 @@
 import axios from 'axios';
 import {
-  UploadResponseDTO, JobStatusResponseDTO, AnalyticsResultDTO,
+  JobStatusResponseDTO, AnalyticsResultDTO,
   CommentMiningRequestDTO, CommentMiningResponseDTO, ClosedLoopResponseDTO,
   ThumbnailVisionResultDTO, ChannelIntentDistributionDTO, Composite8FactorScoreDTO,
-  ClosedLoopSyncRequestDTO, ClosedLoopTelemetryResultDTO
+  ClosedLoopSyncRequestDTO, ClosedLoopTelemetryResultDTO,
+  NicheTrendRadarResponseDTO, ContentGapMatrixResponseDTO
 } from '../types';
-
-
 
 const API_BASE_URL = '/api/v1';
 
-export const uploadWatchHistory = async (
-  file: File,
-  goalText: string,
-  userApiKey?: string
-): Promise<UploadResponseDTO> => {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('goal_text', goalText);
-  if (userApiKey) {
-    formData.append('api_key', userApiKey);
-  }
-
-  const response = await axios.post<UploadResponseDTO>(
-    `${API_BASE_URL}/upload`,
-    formData,
-    {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    }
-  );
+export const syncTelemetryStream = async (payload: {
+  video_id: string;
+  title?: string;
+  channel_name?: string;
+  timestamp?: string;
+  goal_text?: string;
+  job_id?: string;
+}) => {
+  const response = await axios.post(`${API_BASE_URL}/sync/stream`, payload);
   return response.data;
 };
+
+export const getRecentStreamRecords = async (jobId: string = 'stream_job_default', limit: number = 10) => {
+  const response = await axios.get(`${API_BASE_URL}/sync/recent`, {
+    params: { job_id: jobId, limit }
+  });
+  return response.data;
+};
+
+export const syncBatchTelemetryStream = async (payload: {
+  job_id?: string;
+  goal_text?: string;
+  items: Array<{
+    video_id: string;
+    title?: string;
+    channel_name?: string;
+    timestamp?: string;
+  }>;
+}) => {
+  const response = await axios.post(`${API_BASE_URL}/sync/stream/batch`, payload);
+  return response.data;
+};
+
 
 export const getJobStatus = async (jobId: string): Promise<JobStatusResponseDTO> => {
   const response = await axios.get<JobStatusResponseDTO>(
@@ -78,6 +87,14 @@ export const getTaxonomyGraph = async (jobId: string) => {
   return response.data;
 };
 
+export const rebuildTaxonomyGraph = async (jobId: string) => {
+  const response = await axios.post(
+    `${API_BASE_URL}/taxonomy/dag`,
+    { job_id: jobId }
+  );
+  return response.data;
+};
+
 export const mineVideoComments = async (payload: CommentMiningRequestDTO): Promise<CommentMiningResponseDTO> => {
   const response = await axios.post<CommentMiningResponseDTO>(
     `${API_BASE_URL}/creator/comments`,
@@ -93,19 +110,22 @@ export const getMinedComments = async (videoId: string): Promise<CommentMiningRe
   return response.data;
 };
 
-export const getNicheTrends = async (): Promise<any> => {
-  const response = await axios.get(
-    `${API_BASE_URL}/creator/trends`
+export const getNicheTrends = async (goal?: string): Promise<NicheTrendRadarResponseDTO> => {
+  const response = await axios.get<NicheTrendRadarResponseDTO>(
+    `${API_BASE_URL}/creator/trends`,
+    { params: goal ? { goal } : {} }
   );
   return response.data;
 };
 
-export const getVideoOpportunities = async (): Promise<any> => {
-  const response = await axios.get(
-    `${API_BASE_URL}/creator/opportunity`
+export const getVideoOpportunities = async (goal?: string): Promise<ContentGapMatrixResponseDTO> => {
+  const response = await axios.get<ContentGapMatrixResponseDTO>(
+    `${API_BASE_URL}/creator/opportunity`,
+    { params: goal ? { goal } : {} }
   );
   return response.data;
 };
+
 
 export const evaluateVAS = async (payload: {
   title: string;

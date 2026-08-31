@@ -9,10 +9,35 @@ export interface WatchUpdateData {
   timestamp: string;
 }
 
+export interface AlignmentUpdateData {
+  job_id: string;
+  alignment_score?: {
+    alignment_probability_score: number;
+    focus_ratio_weight: number;
+    completion_weight: number;
+    session_density_penalty: number;
+    circadian_penalty: number;
+  };
+  metrics?: {
+    focus_ratio: number;
+    median_completion_prob: number;
+    session_density: number;
+    circadian_score: number;
+    window_period: string;
+  };
+}
+
+export interface VelocityUpdateData {
+  job_id: string;
+  overall_v_cog: number;
+  sessions: any[];
+  fatigue_windows: any[];
+}
+
 export interface WebSocketMessage {
   type: string;
   message?: string;
-  data?: WatchUpdateData;
+  data?: any;
 }
 
 export const useWebSocket = (url: string) => {
@@ -75,5 +100,5 @@ export const useWebSocket = (url: string) => {
     };
   }, [connect]);
 
-  return { isConnected, messages };
+  return { isConnected, messages, setMessages };
 };

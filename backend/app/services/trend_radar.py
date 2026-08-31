@@ -1,4 +1,5 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+
 from app.schemas.trend import NicheTrendDTO, NicheTrendRadarResponseDTO
 
 class TrendRadarEngine:
@@ -46,10 +47,13 @@ class TrendRadarEngine:
             overall_market_sentiment=overall_sentiment
         )
 
-    def fetch_dynamic_niche_trends(self, query: str = "software development AI tech trends") -> NicheTrendRadarResponseDTO:
-        """Dynamically fetch niche trends using Tavily Search API / Gemini / heuristics and analyze velocities."""
+    def fetch_dynamic_niche_trends(self, query: Optional[str] = None, goal: Optional[str] = None) -> NicheTrendRadarResponseDTO:
+        """Dynamically fetch niche trends aligned with user goal using Tavily / Gemini / heuristics."""
         from app.services.tavily_search import TavilySearchService
         tavily = TavilySearchService()
-        dynamic_data = tavily.search_niche_trends(query)
-        return self.analyze_trends(dynamic_data)
+        dynamic_data = tavily.search_niche_trends(query=query, goal=goal)
+        radar_result = self.analyze_trends(dynamic_data)
+        radar_result.aligned_goal = goal
+        return radar_result
+
 
