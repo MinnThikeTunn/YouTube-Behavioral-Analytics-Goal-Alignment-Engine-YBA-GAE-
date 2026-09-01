@@ -25,6 +25,8 @@ import {
   Quote,
   Lightbulb,
   MessageCircleQuestion,
+  Mic,
+  Sliders,
 } from 'lucide-react';
 
 export const AudienceIntentMiner: React.FC = () => {
@@ -97,13 +99,39 @@ export const AudienceIntentMiner: React.FC = () => {
     }
   };
 
-  const getHeatBgColor = (intent: string, heat: number) => {
-    const opacity = Math.max(0.15, heat / 100);
+  const TOPIC_DETAILS: Record<string, { desc: string; icon: React.ReactNode }> = {
+    'Content & Discussion': {
+      desc: 'Subject matter, storyline, gameplay, concepts & reviews',
+      icon: <MessageSquare className="w-3.5 h-3.5 text-indigo-500 shrink-0" />,
+    },
+    'Delivery & Presentation': {
+      desc: 'Speaking style, pacing, host clarity & energy',
+      icon: <Mic className="w-3.5 h-3.5 text-purple-500 shrink-0" />,
+    },
+    'Production & Audio-Visual': {
+      desc: 'Audio levels, sound clarity, editing & video quality',
+      icon: <Sliders className="w-3.5 h-3.5 text-pink-500 shrink-0" />,
+    },
+    'Future Ideas & Requests': {
+      desc: 'Upcoming episodes, new topics & viewer suggestions',
+      icon: <Lightbulb className="w-3.5 h-3.5 text-sky-500 shrink-0" />,
+    },
+    'Technique & Practical Insights': {
+      desc: 'How-to steps, methods, practical tips & troubleshooting',
+      icon: <HelpCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />,
+    },
+  };
+
+  const getHeatBgColor = (intent: string, heat: number, count: number = 1) => {
+    if (count === 0 || heat === 0) {
+      return 'transparent';
+    }
+    const opacity = Math.min(0.95, Math.max(0.22, (heat / 100) * 0.75 + 0.20));
     switch (intent) {
       case 'REQUEST':
         return `rgba(62, 166, 255, ${opacity})`;
       case 'CONFUSION':
-        return `rgba(225, 0, 45, ${opacity * 0.7})`;
+        return `rgba(225, 0, 45, ${opacity * 0.85})`;
       case 'PRAISE':
         return `rgba(43, 166, 64, ${opacity})`;
       case 'DEBATE':
@@ -114,10 +142,26 @@ export const AudienceIntentMiner: React.FC = () => {
   };
 
   // Group heatmap cells by topic
-  const topics = channelData
+  const topics = channelData && channelData.heatmap.length > 0
     ? Array.from(new Set(channelData.heatmap.map((c) => c.topic)))
-    : ['Setup & Config', 'API & Performance', 'Code Examples', 'Tutorial Requests', 'Troubleshooting'];
+    : [
+        'Content & Discussion',
+        'Delivery & Presentation',
+        'Production & Audio-Visual',
+        'Future Ideas & Requests',
+        'Technique & Practical Insights',
+      ];
   const intents: CommentIntentEnum[] = ['REQUEST', 'CONFUSION', 'PRAISE', 'DEBATE'];
+
+  const handleCellClick = (_topic: string, intent: CommentIntentEnum, count: number) => {
+    if (count === 0) return;
+    setSelectedIntentFilter(intent);
+    setIsExplorerOpen(true);
+    const explorerEl = document.getElementById('mined-comments-explorer');
+    if (explorerEl) {
+      explorerEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   const cleanCommentText = (text: string) => {
     if (!text) return '';
@@ -359,10 +403,10 @@ export const AudienceIntentMiner: React.FC = () => {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse min-w-[640px]">
                   <thead>
                     <tr className="border-b border-zinc-200 dark:border-zinc-700/80">
-                      <th className="py-3 px-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                      <th className="py-3 px-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-1/3">
                         Topic Cluster
                       </th>
                       {intents.map((intLbl) => (
@@ -375,30 +419,64 @@ export const AudienceIntentMiner: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-200/60 dark:divide-zinc-700/50">
-                    {topics.map((top) => (
-                      <tr key={top} className="hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-colors">
-                        <td className="py-3.5 px-4 text-xs font-bold text-zinc-900 dark:text-white">
-                          {top}
-                        </td>
-                        {intents.map((intLbl) => {
-                          const cell = getCellData(top, intLbl);
-                          return (
-                            <td key={intLbl} className="py-2.5 px-3 text-center">
-                              <div
-                                className="py-2.5 px-2 rounded-xl text-xs font-bold transition-all border border-black/5 dark:border-white/10 shadow-xs"
-                                style={{
-                                  backgroundColor: getHeatBgColor(intLbl, cell.heat_score),
-                                  color: '#ffffff',
-                                }}
-                              >
-                                <div>{cell.heat_score.toFixed(0)}%</div>
-                                <div className="text-[10px] opacity-90 font-normal">{cell.comment_count} comments</div>
+                    {topics.map((top) => {
+                      const topicMeta = TOPIC_DETAILS[top] || {
+                        desc: 'Channel discussion and feedback cluster',
+                        icon: <Brain className="w-3.5 h-3.5 text-emerald-500 shrink-0" />,
+                      };
+                      return (
+                        <tr key={top} className="hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-start gap-2.5">
+                              <div className="mt-0.5">{topicMeta.icon}</div>
+                              <div>
+                                <div className="text-xs font-black text-zinc-900 dark:text-white leading-tight">
+                                  {top}
+                                </div>
+                                <div className="text-[10px] text-zinc-500 dark:text-zinc-400 font-normal mt-0.5 leading-snug">
+                                  {topicMeta.desc}
+                                </div>
                               </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
+                            </div>
+                          </td>
+                          {intents.map((intLbl) => {
+                            const cell = getCellData(top, intLbl);
+                            const isZero = cell.comment_count === 0;
+                            return (
+                              <td key={intLbl} className="py-2.5 px-3 text-center">
+                                <div
+                                  onClick={() => handleCellClick(top, intLbl, cell.comment_count)}
+                                  title={
+                                    isZero
+                                      ? `0 comments in ${top} (${intLbl})`
+                                      : `${cell.comment_count} comments in ${top} (${intLbl}) • ${cell.heat_score}% relative intensity — Click to inspect`
+                                  }
+                                  className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all border shadow-xs select-none ${
+                                    isZero
+                                      ? 'bg-zinc-100/50 dark:bg-zinc-800/20 border-zinc-200/50 dark:border-zinc-800/50 text-zinc-400 dark:text-zinc-500 cursor-default'
+                                      : 'border-black/10 dark:border-white/10 text-white cursor-pointer hover:scale-[1.04] hover:shadow-md active:scale-[0.98]'
+                                  }`}
+                                  style={
+                                    !isZero
+                                      ? {
+                                          backgroundColor: getHeatBgColor(intLbl, cell.heat_score, cell.comment_count),
+                                        }
+                                      : undefined
+                                  }
+                                >
+                                  <div className={isZero ? 'font-medium text-zinc-400 dark:text-zinc-500' : 'font-black text-white drop-shadow-xs'}>
+                                    {cell.heat_score.toFixed(0)}%
+                                  </div>
+                                  <div className={`text-[10px] ${isZero ? 'text-zinc-400 dark:text-zinc-600 font-normal' : 'text-white/90 font-medium'}`}>
+                                    {cell.comment_count} {cell.comment_count === 1 ? 'comment' : 'comments'}
+                                  </div>
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -526,7 +604,10 @@ export const AudienceIntentMiner: React.FC = () => {
             </div>
 
             {/* NEW: Mined Channel Comments Explorer Section */}
-            <div className="p-6 rounded-[28px] bg-zinc-50/80 dark:bg-zinc-800/40 border border-zinc-200/80 dark:border-zinc-700/60 space-y-5 transition-all shadow-xs">
+            <div
+              id="mined-comments-explorer"
+              className="p-6 rounded-[28px] bg-zinc-50/80 dark:bg-zinc-800/40 border border-zinc-200/80 dark:border-zinc-700/60 space-y-5 transition-all shadow-xs"
+            >
               {/* Explorer Header with Toggle */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-200/70 dark:border-zinc-700/70 pb-4">
                 <div className="flex items-center gap-3">

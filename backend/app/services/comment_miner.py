@@ -307,6 +307,105 @@ Return ONLY valid JSON matching this schema:
 
     # ── Channel Intent Aggregation & Actionable Insights ─────────
 
+    UNIVERSAL_TOPICS: Dict[str, List[str]] = {
+        "Content & Discussion": [
+            # English
+            "content", "topic", "video", "story", "info", "information", "concept", "theory",
+            "review", "part", "episode", "scene", "subject", "gameplay", "match", "game",
+            "song", "music", "recipe", "dish", "food", "workout", "lore", "plot", "character",
+            "movie", "vlog", "travel", "book", "car", "facts", "news", "breakdown", "analysis",
+            "thought", "idea", "about", "context", "history", "point", "opinion", "interesting",
+            "deep", "meaning", "ending", "moment", "channel",
+            # Burmese & Burmglish
+            "အကြောင်း", "အကြောင်းအရာ", "အပိုင်း", "ဗီဒီယို", "ဇာတ်လမ်း", "ဇာတ်ကွက်",
+            "အစီအစဉ်", "သီချင်း", "ဂိမ်း", "ကစားတာ", "ဟင်း", "ချက်နည်း", "လေ့ကျင့်ခန်း",
+            "ဘောလုံး", "ပွဲ", "အချက်အလက်", "သတင်း", "ပညာ", "အမြင်", "သဘောထား",
+            "zart lan", "a pine", "pwel", "thachin", "game"
+        ],
+        "Delivery & Presentation": [
+            # English
+            "clear explanation", "great explanation", "explanation", "explain", "voice", "speaking", "tone",
+            "accent", "pacing", "speed", "clear", "clarity", "understandable", "presentation", "host",
+            "personality", "humor", "funny", "energetic", "style", "teaching", "delivery", "attitude",
+            "vibe", "charisma", "communication", "talk", "talking", "presentation style", "easy to follow", "smooth",
+            # Burmese & Burmglish
+            "ရှင်းပြ", "ပြောတာ", "အသံ", "စကားပြော", "သင်တာ", "သင်ကြားမှု", "ဟာသ", "ရယ်ရ",
+            "နားထောင်လို့ကောင်း", "တင်ဆက်မှု", "ပုံစံ", "စိတ်ရှည်", "နားလည်လွယ်", "ရှင်းတယ်",
+            "shin pya", "pyaw da", "a than", "narna", "lay than"
+        ],
+        "Production & Audio-Visual": [
+            # English
+            "audio", "sound", "volume", "mic", "microphone", "music", "bgm", "soundtrack",
+            "loud", "quiet", "hear", "inaudible", "voiceover", "video quality", "camera",
+            "lighting", "4k", "1080p", "hd", "resolution", "edit", "editing", "cut", "graphic",
+            "visual", "animation", "effect", "transition", "thumbnail", "screen", "subtitle",
+            "captions", "fps", "lag", "blurry", "noise", "bass", "audio issue",
+            # Burmese & Burmglish
+            "အသံ", "အသံမကြား", "အသံတိုး", "ရုပ်ထွက်", "ကင်မရာ", "သီချင်းသံ", "နောက်ခံသီချင်း",
+            "အလင်း", "အလင်းအမှောင်", "edit", "visual", "မကြည်", "စာတန်း", "animation",
+            "a than ma kyar", "bgm", "sound", "edit lote", "ma kyi"
+        ],
+        "Future Ideas & Requests": [
+            # English
+            "next", "upcoming", "please make", "want to see", "do more", "request", "series",
+            "next video", "next episode", "next part", "continuation", "sequel", "cover",
+            "feature", "collaborate", "upload more", "schedule", "when is", "suggest",
+            "suggestion", "new idea", "bring back", "make a video", "more of this", "part 2", "part 3",
+            "what's next", "can you do", "waiting for", "wish", "please do",
+            # Burmese & Burmglish
+            "နောက်အပိုင်း", "နောက်ပွဲ", "တင်ပေး", "လုပ်ပေး", "လာမှာလဲ", "ထပ်လုပ်", "နောက်ထပ်",
+            "လိုချင်", "သိချင်", "အသစ်", "တင်ပေးပါ", "ပြပေးပါ", "နောက်တစ်ခု", "သင်ပေး",
+            "nauk pwel", "nauk pine", "tin pay", "lote pay", "nauk a pine", "nauk tit khu"
+        ],
+        "Technique & Practical Insights": [
+            # English
+            "tried this", "tried it", "tried", "tested", "at home", "taste", "posture",
+            "technique", "method", "step", "how to", "tip", "trick", "guide", "instruction",
+            "practice", "practical", "result", "worked", "experience", "test",
+            "question", "solve", "fix", "error", "mistake", "issue", "alternative", "advice",
+            "apply", "implementation", "skill", "setup", "how do", "problem", "solution",
+            "working", "doesn't work", "stuck", "trouble", "fail", "failed",
+            # Burmese & Burmglish
+            "နည်းလမ်း", "အဆင့်", "ဘယ်လိုလုပ်", "လုပ်နည်း", "အကြံပြု", "စမ်းကြည့်", "ရတယ်",
+            "မရဘူး", "အသုံးချ", "လက်တွေ့", "အဆင်ပြေ", "ပြဿနာ", "အမှား", "ဖြေရှင်း",
+            "အတွေ့အကြုံ", "လုပ်ကြည့်", "bal lo", "lote nee", "a sin", "pyat tha nar"
+        ]
+    }
+
+    def classify_topic(self, text: str, intent: Optional[str] = None) -> str:
+        """Classifies comment text into one of the 5 universal YouTube topic clusters."""
+        if not text:
+            return "Content & Discussion"
+
+        text_clean = clean_comment_text(text).lower()
+        topic_scores = {topic: 0 for topic in self.UNIVERSAL_TOPICS}
+
+        for topic, keywords in self.UNIVERSAL_TOPICS.items():
+            for kw in keywords:
+                if kw in text_clean:
+                    # Multi-word match gets higher weight
+                    weight = 2 if (" " in kw or len(kw) > 6) else 1
+                    topic_scores[topic] += weight
+
+        # Intent affinity weighting
+        if intent == "REQUEST":
+            topic_scores["Future Ideas & Requests"] += 1
+        elif intent == "CONFUSION":
+            topic_scores["Technique & Practical Insights"] += 1
+
+        best_topic, best_score = max(topic_scores.items(), key=lambda x: x[1])
+
+        if best_score > 0:
+            return best_topic
+
+        # Fallback based on intent if no keywords matched
+        if intent == "REQUEST":
+            return "Future Ideas & Requests"
+        elif intent == "CONFUSION":
+            return "Technique & Practical Insights"
+
+        return "Content & Discussion"
+
     def get_channel_intent_distribution(self, channel_handle: str = None):
         """Aggregate channel-wide audience intent distribution, topic heatmap, and mined comments."""
         from app.schemas.creator import (
@@ -372,7 +471,7 @@ Return ONLY valid JSON matching this schema:
             comments = self.db.query(MinedComment).all()
 
         video_ids = set(c.video_id for c in comments) if comments else set(mined_video_ids)
-        
+
         if not video_ids and not comments and not channel_handle:
             try:
                 from app.db.models import RawRecord
@@ -383,17 +482,9 @@ Return ONLY valid JSON matching this schema:
 
         total_videos = len(video_ids)
         total_comments = len(comments)
-
-        topics_def = {
-            "Setup & Config": ["setup", "config", "install", "environment", "env", "docker"],
-            "API & Performance": ["api", "performance", "fast", "slow", "latency", "speed", "endpoint"],
-            "Code Examples": ["code", "example", "repo", "github", "syntax", "function"],
-            "Tutorial Requests": ["tutorial", "guide", "how to", "please", "make a video", "more"],
-            "Troubleshooting": ["error", "bug", "issue", "fail", "broken", "wrong", "fix"]
-        }
+        intent_labels = ["REQUEST", "CONFUSION", "PRAISE", "DEBATE"]
 
         if not comments:
-            intent_labels = ["PRAISE", "REQUEST", "CONFUSION", "DEBATE"]
             distribution = [
                 IntentDistributionBreakdownDTO(
                     intent_label=lbl,
@@ -407,7 +498,7 @@ Return ONLY valid JSON matching this schema:
                     intent_label=int_lbl,
                     comment_count=0,
                     heat_score=0.0
-                ) for t_name in topics_def for int_lbl in intent_labels
+                ) for t_name in self.UNIVERSAL_TOPICS for int_lbl in intent_labels
             ]
             return ChannelIntentDistributionDTO(
                 total_comments_analyzed=0,
@@ -445,7 +536,8 @@ Return ONLY valid JSON matching this schema:
                 intent_counts["PRAISE"] += 1
 
         distribution = []
-        for label, cnt in intent_counts.items():
+        for label in intent_labels:
+            cnt = intent_counts.get(label, 0)
             pct = round((cnt / total_comments * 100.0), 1) if total_comments > 0 else 0.0
             distribution.append(IntentDistributionBreakdownDTO(
                 intent_label=label,
@@ -453,28 +545,30 @@ Return ONLY valid JSON matching this schema:
                 percentage=pct
             ))
 
-        heatmap_cells = []
-        topic_intent_matrix = {t: {i: 0 for i in intent_counts} for t in topics_def}
+        # 2D Topic x Intent Heat Matrix with Universal Categories
+        topic_intent_matrix = {t: {i: 0 for i in intent_labels} for t in self.UNIVERSAL_TOPICS}
 
         for c in comments:
-            txt = c.text_display.lower()
+            txt = c.text_display or ""
             label = c.intent_label.value if hasattr(c.intent_label, "value") else str(c.intent_label)
-            if label not in intent_counts:
+            if label not in intent_labels:
                 label = "PRAISE"
 
-            matched_topic = False
-            for top_name, keywords in topics_def.items():
-                if any(kw in txt for kw in keywords):
-                    topic_intent_matrix[top_name][label] += 1
-                    matched_topic = True
+            assigned_topic = self.classify_topic(txt, intent=label)
+            topic_intent_matrix[assigned_topic][label] += 1
 
-            if not matched_topic:
-                topic_intent_matrix["Tutorial Requests"][label] += 1
-
+        # Global max count across all cells for realistic, non-distorted heatmap intensity
+        max_cell_overall = 0
         for top_name, intents_dict in topic_intent_matrix.items():
-            max_in_topic = max(intents_dict.values()) or 1
-            for int_lbl, cnt in intents_dict.items():
-                heat = round(min(100.0, (cnt / max_in_topic) * 100.0), 1) if cnt > 0 else 0.0
+            for cnt in intents_dict.values():
+                if cnt > max_cell_overall:
+                    max_cell_overall = cnt
+
+        heatmap_cells = []
+        for top_name, intents_dict in topic_intent_matrix.items():
+            for int_lbl in intent_labels:
+                cnt = intents_dict.get(int_lbl, 0)
+                heat = round(min(100.0, (cnt / max_cell_overall) * 100.0), 1) if (max_cell_overall > 0 and cnt > 0) else 0.0
                 heatmap_cells.append(TopicIntentHeatmapCellDTO(
                     topic=top_name,
                     intent_label=int_lbl,
@@ -482,6 +576,7 @@ Return ONLY valid JSON matching this schema:
                     heat_score=heat
                 ))
 
+        # Actionable insights synthesis: feature requests and confusion points
         req_comments = [c for c in comments if (hasattr(c.intent_label, "value") and c.intent_label.value == "REQUEST") or str(c.intent_label) == "REQUEST"]
         conf_comments = [c for c in comments if (hasattr(c.intent_label, "value") and c.intent_label.value == "CONFUSION") or str(c.intent_label) == "CONFUSION"]
 
@@ -499,6 +594,20 @@ Return ONLY valid JSON matching this schema:
 
         sentiment_scores = [c.sentiment_score for c in comments if c.sentiment_score is not None]
         avg_sentiment = round(sum(sentiment_scores) / len(sentiment_scores), 2) if sentiment_scores else 0.0
+
+        # Attempt Gemini AI Brief Synthesis if channel_handle is specified
+        if channel_handle:
+            ai_result = self._call_gemini_multilingual_miner(
+                comments=sorted_comments[:40],
+                channel_handle=channel_handle
+            )
+            if ai_result:
+                if ai_result.get("top_feature_requests"):
+                    top_requests = ai_result["top_feature_requests"][:4]
+                if ai_result.get("top_confusion_points"):
+                    top_confusions = ai_result["top_confusion_points"][:4]
+                if "channel_sentiment_index" in ai_result and ai_result["channel_sentiment_index"] is not None:
+                    avg_sentiment = round(float(ai_result["channel_sentiment_index"]), 2)
 
         return ChannelIntentDistributionDTO(
             total_comments_analyzed=total_comments,

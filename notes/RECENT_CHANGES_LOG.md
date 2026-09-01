@@ -564,3 +564,12 @@
 - [2026-09-01T19:52:43.129Z] Modified file: `backend\app\services\opportunity_engine.py` - Pending specialist committee & Ultimate Judge review.
 - [2026-09-01T19:53:13.019Z] Modified file: `backend\app\services\opportunity_engine.py` - Pending specialist committee & Ultimate Judge review.
 - [2026-09-01T19:53:36.337Z] Modified file: `backend\app\services\opportunity_engine.py` - Pending specialist committee & Ultimate Judge review.
+- [2026-09-01T20:15:32.097Z] Modified file: `backend\app\services\comment_miner.py` - Pending specialist committee & Ultimate Judge review.
+- [2026-09-01T20:17:37.907Z] Modified file: `backend\app\services\comment_miner.py` - Pending specialist committee & Ultimate Judge review.
+- [2026-09-01T20:20:10.244Z] Modified file: `backend\tests\test_multilingual_comment_miner.py` - Pending specialist committee & Ultimate Judge review.
+- [2026-09-01T20:22:01.739Z] Modified file: `backend\app\services\comment_miner.py` - Pending specialist committee & Ultimate Judge review.
+- [2026-09-01T20:23:06.363Z] Modified file: `frontend\src\components\creator\AudienceIntentMiner.tsx` - Pending specialist committee & Ultimate Judge review.
+- [2026-09-01T20:23:54.968Z] Modified file: `frontend\src\components\creator\AudienceIntentMiner.tsx` - Pending specialist committee & Ultimate Judge review.
+- [2026-09-01T20:24:41.028Z] Modified file: `frontend\src\components\creator\AudienceIntentMiner.tsx` - Pending specialist committee & Ultimate Judge review.
+- [2026-09-01T20:25:12.378Z] Modified file: `frontend\src\components\creator\AudienceIntentMiner.tsx` - Pending specialist committee & Ultimate Judge review.
+- [2026-09-01T20:26:47.472Z] Modified file: `frontend\src\components\creator\AudienceIntentMiner.tsx` - Pending specialist committee & Ultimate Judge review.
