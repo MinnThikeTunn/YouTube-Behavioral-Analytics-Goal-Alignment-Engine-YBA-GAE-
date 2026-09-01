@@ -168,6 +168,8 @@ export interface VideoOpportunityDTO {
   opportunity_tier: string;
   recommended_titles: string[];
   goal_alignment_score?: number;
+  title_match_scores?: number[];
+  factor_scores?: FactorScoreDTO[];
 }
 
 export interface ContentGapMatrixResponseDTO {

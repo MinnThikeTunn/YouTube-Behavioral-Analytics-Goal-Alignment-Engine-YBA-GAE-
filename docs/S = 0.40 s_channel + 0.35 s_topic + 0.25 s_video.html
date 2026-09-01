@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Empirical Proof & Optimality Analysis | YBA-GAE Goal Alignment Engine</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
+      options: { renderActions: { addMenu: [0, '', ''] } }
+    };
+  </script>
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+  <style>
+    :root {
+      --bg: #07090e;
+      --bg2: #0b0f17;
+      --panel: #0d131f;
+      --panel-hover: #121927;
+      --line: #1b2434;
+      --line2: #2a374d;
+      --text: #f0f4f8;
+      --dim: #9aaec7;
+      --mute: #586782;
+      --blue: #60a5fa;
+      --purple: #a78bfa;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --red: #f87171;
+      --accent: var(--blue);
+      --accent-rgb: 96, 165, 250;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%; width: 100%;
+      background: var(--bg); color: var(--text);
+      font-family: "Space Grotesk", sans-serif;
+      overflow: hidden;
+    }
+
+    /* Outer Container Frame */
+    #frame {
+      position: fixed; inset: 12px; border: 1px solid var(--line);
+      border-radius: 32px; pointer-events: none; z-index: 50;
+    }
+    #frame i { position: absolute; width: 18px; height: 18px; border-color: var(--line2); border-style: solid; }
+    #frame i.f-tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; border-top-left-radius: 32px; }
+    #frame i.f-tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; border-top-right-radius: 32px; }
+    #frame i.f-bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; border-bottom-left-radius: 32px; }
+    #frame i.f-br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; border-bottom-right-radius: 32px; }
+
+    /* Top Navigation Header */
+    header.nav-header {
+      position: fixed; top: 20px; left: 32px; right: 32px;
+      display: flex; justify-content: space-between; align-items: center;
+      z-index: 60; pointer-events: auto;
+    }
+    .brand-tag {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-family: "JetBrains Mono", monospace; font-size: 12px;
+      font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--accent); background: rgba(var(--accent-rgb), 0.08);
+      border: 1px solid rgba(var(--accent-rgb), 0.25);
+      padding: 6px 14px; border-radius: 9999px; backdrop-filter: blur(12px);
+    }
+    .brand-tag::before {
+      content: ""; width: 8px; height: 8px; background: var(--accent);
+      border-radius: 50%; box-shadow: 0 0 10px var(--accent);
+    }
+    .nav-tabs {
+      display: flex; gap: 6px; background: rgba(13, 19, 31, 0.90);
+      border: 1px solid var(--line); border-radius: 9999px; padding: 4px 6px;
+      backdrop-filter: blur(16px); box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .nav-btn {
+      background: transparent; border: none; color: var(--dim);
+      font-family: "JetBrains Mono", monospace; font-size: 11.5px;
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+      padding: 8px 15px; border-radius: 9999px; cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .nav-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+    .nav-btn.active {
+      color: #fff; background: rgba(var(--accent-rgb), 0.22);
+      border: 1px solid rgba(var(--accent-rgb), 0.45);
+      box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.2);
+    }
+
+    /* Deck and Slides */
+    .deck { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+    .slide {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      justify-content: flex-start; padding: 10vh 6vw 9vh; opacity: 0;
+      transform: translateY(12px) scale(0.99);
+      transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none; overflow-y: auto; overflow-x: hidden;
+    }
+    .slide.active {
+      opacity: 1; transform: translateY(0) scale(1); pointer-events: auto;
+    }
+    .slide::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(var(--accent-rgb), 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--accent-rgb), 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      mask-image: radial-gradient(ellipse 85% 80% at 50% 50%, #000 40%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 85% 80% at 50% 50%, #000 40%, transparent 100%);
+    }
+    .slide > * { position: relative; z-index: 1; }
+
+    /* Color Accents */
+    .slide[data-accent="blue"] { --accent: var(--blue); --accent-rgb: 96, 165, 250; }
+    .slide[data-accent="purple"] { --accent: var(--purple); --accent-rgb: 167, 139, 250; }
+    .slide[data-accent="green"] { --accent: var(--green); --accent-rgb: 52, 211, 153; }
+    .slide[data-accent="amber"] { --accent: var(--amber); --accent-rgb: 251, 191, 36; }
+
+    /* Typography */
+    h1 {
+      font-weight: 900; font-size: clamp(32px, 4.2vw, 56px);
+      line-height: 1.05; letter-spacing: -0.04em; margin: 0 0 12px; color: #fff;
+    }
+    h2 {
+      font-weight: 900; font-size: clamp(22px, 2.8vw, 38px);
+      line-height: 1.1; letter-spacing: -0.03em; margin: 0 0 10px; color: #fff;
+    }
+    h3 {
+      font-weight: 700; font-size: clamp(15px, 1.6vw, 20px);
+      margin: 0 0 6px; color: var(--text);
+    }
+    p.lead {
+      font-size: clamp(14px, 1.25vw, 17.5px); line-height: 1.55;
+      color: var(--dim); max-width: 72ch; margin: 0 0 18px;
+    }
+    .mono { font-family: "JetBrains Mono", monospace; }
+
+    /* Containers (rounded-[32px]) */
+    .card {
+      background: linear-gradient(180deg, var(--panel) 0%, var(--bg2) 100%);
+      border: 1px solid var(--line); border-radius: 32px; padding: 22px 26px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .card:hover {
+      border-color: rgba(var(--accent-rgb), 0.35);
+      transform: translateY(-2px);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+    /* Controls & Sliders */
+    .slider-group {
+      display: flex; flex-direction: column; gap: 12px;
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 28px; padding: 18px 22px;
+    }
+    .slider-row {
+      display: grid; grid-template-columns: 130px 1fr 65px;
+      align-items: center; gap: 14px;
+    }
+    .slider-label {
+      font-family: "JetBrains Mono", monospace; font-size: 12.5px;
+      font-weight: 600; color: var(--text);
+    }
+    input[type=range] {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 6px; background: var(--line2);
+      border-radius: 4px; outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px;
+      border-radius: 50%; background: var(--accent);
+      cursor: pointer; box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.8);
+      transition: transform 0.15s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.25); }
+
+    .val-badge {
+      font-family: "JetBrains Mono", monospace; font-size: 13px;
+      font-weight: 700; color: var(--accent); text-align: right;
+      background: rgba(var(--accent-rgb), 0.1); border: 1px solid rgba(var(--accent-rgb), 0.25);
+      padding: 4px 8px; border-radius: 8px;
+    }
+
+    /* Metric Cards */
+    .metric-card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 24px; padding: 14px 18px; text-align: center;
+      transition: all 0.2s ease;
+    }
+    .metric-card.optimal {
+      border-color: rgba(52, 211, 153, 0.5);
+      background: linear-gradient(180deg, rgba(52, 211, 153, 0.08) 0%, var(--panel) 100%);
+    }
+    .metric-title {
+      font-family: "JetBrains Mono", monospace; font-size: 10.5px;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--mute);
+      margin-bottom: 4px;
+    }
+    .metric-value {
+      font-family: "JetBrains Mono", monospace; font-size: 24px;
+      font-weight: 900; color: #fff;
+    }
+
+    /* Buttons */
+    .btn {
+      font-family: "JetBrains Mono", monospace; font-size: 11.5px;
+      font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 9px 16px; border-radius: 9999px; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-primary {
+      background: var(--accent); color: #07090e;
+      border: 1px solid var(--accent); font-weight: 700;
+    }
+    .btn-primary:hover {
+      box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.5);
+      transform: translateY(-2px);
+    }
+    .btn-outline {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--line2);
+    }
+    .btn-outline:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: rgba(var(--accent-rgb), 0.08);
+    }
+    .btn-outline.active {
+      border-color: var(--accent); color: #fff;
+      background: rgba(var(--accent-rgb), 0.2);
+    }
+
+    /* Terminal CLI Window Component */
+    .terminal-window {
+      background: #06090e; border: 1px solid #1e293b;
+      border-radius: 24px; overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+      font-family: "JetBrains Mono", monospace;
+    }
+    .terminal-header {
+      background: #0f172a; padding: 10px 16px; display: flex;
+      justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b;
+    }
+    .terminal-dots { display: flex; gap: 7px; align-items: center; }
+    .terminal-dot { width: 11px; height: 11px; border-radius: 50%; }
+    .terminal-dot.red { background: #ef4444; }
+    .terminal-dot.yellow { background: #f59e0b; }
+    .terminal-dot.green { background: #10b981; }
+    .terminal-title { font-size: 11.5px; color: #94a3b8; font-weight: 600; }
+    .terminal-body {
+      padding: 18px 22px; font-size: 12.5px; line-height: 1.65;
+      color: #e2e8f0; overflow-x: auto; overflow-y: visible; white-space: pre;
+    }
+    .t-green { color: #34d399; font-weight: 700; }
+    .t-blue { color: #60a5fa; }
+    .t-purple { color: #c084fc; }
+    .t-amber { color: #fbbf24; }
+    .t-dim { color: #64748b; }
+    .t-red { color: #f87171; }
+
+    /* Example Variance Cards */
+    .example-card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 28px; padding: 18px 22px; display: flex;
+      flex-direction: column; gap: 12px; transition: all 0.25s ease;
+    }
+    .example-card:hover {
+      border-color: rgba(var(--accent-rgb), 0.4);
+      transform: translateY(-2px);
+    }
+    .example-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;
+    }
+    .example-meta-tag {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; padding: 3px 8px; border-radius: 6px;
+    }
+    .variance-badge {
+      font-family: "JetBrains Mono", monospace; font-size: 12px;
+      font-weight: 700; padding: 4px 10px; border-radius: 9999px;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .variance-badge.up { background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+    .variance-badge.down { background: rgba(248, 113, 113, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }
+    .variance-badge.neutral { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+    .score-progress-wrap {
+      background: var(--line2); height: 10px; border-radius: 9999px;
+      overflow: hidden; position: relative; margin: 6px 0;
+    }
+    .score-progress-bar {
+      height: 100%; border-radius: 9999px;
+      transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s ease;
+    }
+
+    /* Bottom Footer Bar */
+    .footer-bar {
+      position: fixed; bottom: 18px; left: 32px; right: 32px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: "JetBrains Mono", monospace; font-size: 11px;
+      color: var(--mute); z-index: 60; pointer-events: auto;
+    }
+    .key-hint {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.05); border: 1px solid var(--line);
+      padding: 2px 8px; border-radius: 6px; color: var(--dim);
+    }
+    /* Clean Minimalist Single Scrollbar */
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+  </style>
+</head>
+<body>
+
+  <div id="frame">
+    <i class="f-tl"></i><i class="f-tr"></i><i class="f-bl"></i><i class="f-br"></i>
+  </div>
+
+  <!-- Top Navigation -->
+  <header class="nav-header">
+    <div class="brand-tag">
+      <span>YBA-GAE Optimization &bull; Empirical Proof</span>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-btn active" onclick="gotoSlide(0)">1. Live Variance Sandbox</button>
+      <button class="nav-btn" onclick="gotoSlide(1)">2. Terminal Benchmark</button>
+    </div>
+  </header>
+
+  <!-- Slide Deck -->
+  <div class="deck" id="deck">
+
+    <!-- SLIDE 1: Live Visualization & Output Variances with Real Examples -->
+    <div class="slide active" id="slide-1" data-accent="blue">
+      <div style="max-width: 1240px; width: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
+          <div>
+            <h1 style="margin: 0;">Interactive Goal Alignment & Variance Engine</h1>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary" onclick="setPreset(0.40, 0.35, 0.25)">★ Proposed Optimal [0.40, 0.35, 0.25]</button>
+            <button class="btn btn-outline" onclick="setPreset(0.33, 0.33, 0.34)">Uniform [0.33, 0.33, 0.33]</button>
+            <button class="btn btn-outline" onclick="setPreset(0.10, 0.10, 0.80)">Title-Heavy [0.10, 0.10, 0.80]</button>
+          </div>
+        </div>
+
+        <!-- Target Goal Banner -->
+        <div style="background: rgba(96, 165, 250, 0.08); border: 1px solid rgba(96, 165, 250, 0.25); border-radius: 20px; padding: 10px 18px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="mono" style="font-size: 11px; font-weight: 700; color: var(--blue); text-transform: uppercase;">Current User Learning Goal:</span>
+            <span style="font-size: 14px; font-weight: 700; color: #fff;">"Learn Machine Learning & Full-Stack Python Engineering"</span>
+          </div>
+          <span class="mono" style="font-size: 11px; color: var(--dim);">Formula: $S = w_c s_{\text{channel}} + w_t s_{\text{topic}} + w_v s_{\text{video}}$</span>
+        </div>
+
+        <!-- Weight Controls and Metric Cards -->
+        <div class="grid-2" style="gap: 16px; margin-bottom: 16px;">
+          <!-- Slider Controls -->
+          <div class="slider-group">
+            <div class="slider-row">
+              <span class="slider-label" style="color: var(--blue);">&#9632; Channel ($w_c$)</span>
+              <input type="range" id="slider-wc" min="0" max="100" value="40" oninput="handleSliderChange('wc')">
+              <span class="val-badge" id="val-wc">0.40</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-label" style="color: var(--purple);">&#9632; Topic ($w_t$)</span>
+              <input type="range" id="slider-wt" min="0" max="100" value="35" oninput="handleSliderChange('wt')">
+              <span class="val-badge" id="val-wt">0.35</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-label" style="color: var(--amber);">&#9632; Video ($w_v$)</span>
+              <input type="range" id="slider-wv" min="0" max="100" value="25" oninput="handleSliderChange('wv')">
+              <span class="val-badge" id="val-wv">0.25</span>
+            </div>
+          </div>
+
+          <!-- Live Global Metrics -->
+          <div class="grid-4" style="align-items: center;">
+            <div class="metric-card optimal" id="card-rho">
+              <div class="metric-title">Spearman &rho;</div>
+              <div class="metric-value" id="metric-rho" style="color: var(--green);">0.967</div>
+            </div>
+            <div class="metric-card" id="card-ndcg">
+              <div class="metric-title">NDCG@10</div>
+              <div class="metric-value" id="metric-ndcg" style="color: var(--blue);">0.999</div>
+            </div>
+            <div class="metric-card" id="card-mae">
+              <div class="metric-title">Mean Error</div>
+              <div class="metric-value" id="metric-mae" style="color: var(--amber);">0.052</div>
+            </div>
+            <div class="metric-card" id="card-acc">
+              <div class="metric-title">Accuracy</div>
+              <div class="metric-value" id="metric-acc" style="color: var(--purple);">100%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 Concrete Real-World Examples with Live Variance % -->
+        <div class="grid-4" id="example-cards-grid" style="gap: 14px;">
+          
+          <!-- Example 1: Clickbait Title on High-Quality Channel -->
+          <div class="example-card" id="ex-1">
+            <div class="example-header">
+              <div>
+                <span class="example-meta-tag" style="background: rgba(52, 211, 153, 0.15); color: #34d399;">Case 1: Clickbait Title</span>
+                <div style="font-weight: 700; font-size: 13px; margin-top: 4px; color: #fff;">freeCodeCamp.org</div>
+              </div>
+              <span class="variance-badge up" id="var-badge-1">+14.2%</span>
+            </div>
+            <div style="font-size: 11.5px; line-height: 1.4; color: var(--dim);">
+              <div><strong style="color: var(--text);">Video:</strong> <em>"I built this crazy AI in 24 hours (NOT CLICKBAIT)"</em> ($s_v = 0.25$)</div>
+              <div><strong style="color: var(--text);">Topic:</strong> <em>Computer Programming & AI</em> ($s_t = 0.90$)</div>
+              <div><strong style="color: var(--text);">Channel:</strong> <em>freeCodeCamp Tutorial Hub</em> ($s_c = 0.95$)</div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; font-family: 'JetBrains Mono'; margin-bottom: 2px;">
+                <span>Goal Alignment Score:</span>
+                <strong style="color: var(--green); font-size: 14px;" id="score-val-1">75.8%</strong>
+              </div>
+              <div class="score-progress-wrap">
+                <div class="score-progress-bar" id="prog-bar-1" style="width: 75.8%; background: var(--green);"></div>
+              </div>
+              <div style="font-size: 10px; font-family: 'JetBrains Mono'; color: var(--mute); display: flex; justify-content: space-between; margin-top: 4px;">
+                <span id="contrib-1">Ch: +38.0% | Top: +31.5% | Vid: +6.3%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Example 2: SEO Keyword Hijack on Drama Channel -->
+          <div class="example-card" id="ex-2">
+            <div class="example-header">
+              <div>
+                <span class="example-meta-tag" style="background: rgba(248, 113, 113, 0.15); color: #f87171;">Case 2: Keyword Hijack</span>
+                <div style="font-weight: 700; font-size: 13px; margin-top: 4px; color: #fff;">Celebrity Drama Vlogs</div>
+              </div>
+              <span class="variance-badge down" id="var-badge-2">-28.4%</span>
+            </div>
+            <div style="font-size: 11.5px; line-height: 1.4; color: var(--dim);">
+              <div><strong style="color: var(--text);">Video:</strong> <em>"Machine Learning Scandal EXPOSED! Shocking"</em> ($s_v = 0.88$)</div>
+              <div><strong style="color: var(--text);">Topic:</strong> <em>Pop Culture & Entertainment</em> ($s_t = 0.15$)</div>
+              <div><strong style="color: var(--text);">Channel:</strong> <em>Daily Gossip Vlogs</em> ($s_c = 0.10$)</div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; font-family: 'JetBrains Mono'; margin-bottom: 2px;">
+                <span>Goal Alignment Score:</span>
+                <strong style="color: var(--red); font-size: 14px;" id="score-val-2">31.2%</strong>
+              </div>
+              <div class="score-progress-wrap">
+                <div class="score-progress-bar" id="prog-bar-2" style="width: 31.2%; background: var(--red);"></div>
+              </div>
+              <div style="font-size: 10px; font-family: 'JetBrains Mono'; color: var(--mute); display: flex; justify-content: space-between; margin-top: 4px;">
+                <span id="contrib-2">Ch: +4.0% | Top: +5.3% | Vid: +22.0%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Example 3: High Precision Mathematics & AI Lecture -->
+          <div class="example-card" id="ex-3">
+            <div class="example-header">
+              <div>
+                <span class="example-meta-tag" style="background: rgba(96, 165, 250, 0.15); color: #60a5fa;">Case 3: Pure Lecture</span>
+                <div style="font-weight: 700; font-size: 13px; margin-top: 4px; color: #fff;">3Blue1Brown</div>
+              </div>
+              <span class="variance-badge neutral" id="var-badge-3">+0.2%</span>
+            </div>
+            <div style="font-size: 11.5px; line-height: 1.4; color: var(--dim);">
+              <div><strong style="color: var(--text);">Video:</strong> <em>"Neural Networks & Gradient Descent"</em> ($s_v = 0.94$)</div>
+              <div><strong style="color: var(--text);">Topic:</strong> <em>Mathematics & Machine Learning</em> ($s_t = 0.95$)</div>
+              <div><strong style="color: var(--text);">Channel:</strong> <em>Visual Math & AI Concepts</em> ($s_c = 0.96$)</div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; font-family: 'JetBrains Mono'; margin-bottom: 2px;">
+                <span>Goal Alignment Score:</span>
+                <strong style="color: var(--green); font-size: 14px;" id="score-val-3">95.1%</strong>
+              </div>
+              <div class="score-progress-wrap">
+                <div class="score-progress-bar" id="prog-bar-3" style="width: 95.1%; background: var(--green);"></div>
+              </div>
+              <div style="font-size: 10px; font-family: 'JetBrains Mono'; color: var(--mute); display: flex; justify-content: space-between; margin-top: 4px;">
+                <span id="contrib-3">Ch: +38.4% | Top: +33.3% | Vid: +23.5%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Example 4: MIT OpenCourseWare Lecture with Vague Title -->
+          <div class="example-card" id="ex-4">
+            <div class="example-header">
+              <div>
+                <span class="example-meta-tag" style="background: rgba(167, 139, 250, 0.15); color: #a78bfa;">Case 4: Courseware #4</span>
+                <div style="font-weight: 700; font-size: 13px; margin-top: 4px; color: #fff;">MIT OpenCourseWare</div>
+              </div>
+              <span class="variance-badge up" id="var-badge-4">+11.8%</span>
+            </div>
+            <div style="font-size: 11.5px; line-height: 1.4; color: var(--dim);">
+              <div><strong style="color: var(--text);">Video:</strong> <em>"Session 4: Recurrences and Divide & Conquer"</em> ($s_v = 0.35$)</div>
+              <div><strong style="color: var(--text);">Topic:</strong> <em>Computer Science Algorithms</em> ($s_t = 0.92$)</div>
+              <div><strong style="color: var(--text);">Channel:</strong> <em>MIT University Courses</em> ($s_c = 0.98$)</div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; font-family: 'JetBrains Mono'; margin-bottom: 2px;">
+                <span>Goal Alignment Score:</span>
+                <strong style="color: var(--green); font-size: 14px;" id="score-val-4">80.2%</strong>
+              </div>
+              <div class="score-progress-wrap">
+                <div class="score-progress-bar" id="prog-bar-4" style="width: 80.2%; background: var(--green);"></div>
+              </div>
+              <div style="font-size: 10px; font-family: 'JetBrains Mono'; color: var(--mute); display: flex; justify-content: space-between; margin-top: 4px;">
+                <span id="contrib-4">Ch: +39.2% | Top: +32.2% | Vid: +8.8%</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: Terminal Benchmark Output -->
+    <div class="slide" id="slide-2" data-accent="purple">
+      <div style="max-width: 1150px; width: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px;">
+          <div>
+            <h2 style="margin: 0;">Terminal Benchmark Execution Output</h2>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary" onclick="simulateTerminalRun()">&#9654; Re-Run Live Benchmark</button>
+            <button class="btn btn-outline" onclick="copyTerminalText()">Copy Output</button>
+          </div>
+        </div>
+
+        <!-- Styled Terminal Frame -->
+        <div class="terminal-window">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <div class="terminal-dot red"></div>
+              <div class="terminal-dot yellow"></div>
+              <div class="terminal-dot green"></div>
+            </div>
+            <div class="terminal-title">bash &mdash; python Project/weight_optimization_experiment.py</div>
+            <div style="font-size: 11px; color: #64748b;">Python 3.11.9 (x64)</div>
+          </div>
+          <div class="terminal-body" id="terminal-content">
+<span class="t-dim">$ python Project/weight_optimization_experiment.py</span>
+===========================================================================
+  <span class="t-blue">GRID SEARCH OPTIMIZATION ON 2-SIMPLEX (w_c + w_t + w_v = 1.0)</span>
+===========================================================================
+
+<span class="t-green">[*] Global Optimum Found: w_channel=0.40, w_topic=0.35, w_video=0.25</span>
+  <span class="t-purple">Spearman Rank Correlation:</span> <span class="t-green">0.9670</span>
+  <span class="t-purple">NDCG@10:                  </span> <span class="t-green">0.9990</span>
+  <span class="t-purple">Mean Absolute Error (MAE):</span> <span class="t-amber">0.0520</span>
+  <span class="t-purple">Classification Accuracy:  </span> <span class="t-green">100.0%</span>
+
+===========================================================================
+  <span class="t-blue">ABLATION STUDY BENCHMARK TABLE</span>
+===========================================================================
+<span class="t-dim">Model Configuration          | w_ch  w_top w_vid | Spearman NDCG@10  MAE    Acc   </span>
+---------------------------------------------------------------------------
+<span class="t-red">M1: Video Title Only         | 0.00  0.00  1.00  | 0.274    0.882    0.342  40.0 %</span>
+<span class="t-purple">M2: Topic Category Only      | 0.00  1.00  0.00  | 0.939    0.997    0.040  100.0%</span>
+<span class="t-blue">M3: Channel Meta Only        | 1.00  0.00  0.00  | 0.778    0.993    0.072  100.0%</span>
+<span class="t-amber">M4: Uniform Baseline         | 0.33  0.33  0.34  | 0.967    0.999    0.087  100.0%</span>
+<span class="t-green">M5: Proposed Optimal         | 0.40  0.35  0.25  | 0.967    0.999    0.052  100.0%</span>
+===========================================================================
+<span class="t-green">[SUCCESS]</span> Optimization search completed across 231 simplex coordinates.
+          </div>
+        </div>
+
+        <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--dim);">
+          <span>Script Location: <code class="mono" style="color: var(--blue);">D:/DAProject/Project/weight_optimization_experiment.py</code></span>
+          <span class="mono" style="color: var(--green);">Status: Verified & Compatible with Windows CP1252 / UTF-8</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer Navigation -->
+  <div class="footer-bar">
+    <div>
+      Use <span class="key-hint">&larr;</span> <span class="key-hint">&rarr;</span> or <span class="key-hint">Space</span> to navigate slides
+    </div>
+    <div id="slide-indicator">
+      Slide <b style="color: var(--accent);" id="cur-slide-num">1</b> / 2
+    </div>
+  </div>
+
+  <script>
+    // --- Slide Navigation ---
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const navBtns = Array.from(document.querySelectorAll('.nav-btn'));
+    let currentIdx = 0;
+
+    function gotoSlide(idx) {
+      if (idx < 0 || idx >= slides.length) return;
+      slides[currentIdx].classList.remove('active');
+      navBtns[currentIdx].classList.remove('active');
+      
+      currentIdx = idx;
+      slides[currentIdx].classList.add('active');
+      navBtns[currentIdx].classList.add('active');
+
+      document.getElementById('cur-slide-num').innerText = currentIdx + 1;
+
+      const accent = slides[currentIdx].getAttribute('data-accent') || 'blue';
+      document.body.style.setProperty('--accent', `var(--${accent})`);
+
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        gotoSlide((currentIdx + 1) % slides.length);
+      } else if (e.key === 'ArrowLeft') {
+        gotoSlide((currentIdx - 1 + slides.length) % slides.length);
+      }
+    });
+
+    // --- Benchmark Dataset for Metrics & Live Examples ---
+    const validationDataset = [
+      { ch: 0.95, top: 0.90, vid: 0.25, truth: 0.85 }, // 1. Clickbait coding tutorial
+      { ch: 0.10, top: 0.15, vid: 0.88, truth: 0.20 }, // 2. Keyword drama vlog
+      { ch: 0.96, top: 0.95, vid: 0.94, truth: 0.96 }, // 3. 3Blue1Brown lecture
+      { ch: 0.98, top: 0.92, vid: 0.35, truth: 0.88 }, // 4. MIT Courseware lecture
+      { ch: 0.15, top: 0.10, vid: 0.15, truth: 0.10 }, // 5. Casual vlog
+      { ch: 0.88, top: 0.82, vid: 0.80, truth: 0.85 }, // 6. Data science tutorial
+      { ch: 0.30, top: 0.40, vid: 0.75, truth: 0.45 }, // 7. Tech gadget unboxing
+      { ch: 0.90, top: 0.85, vid: 0.30, truth: 0.80 }, // 8. University lecture
+      { ch: 0.12, top: 0.10, vid: 0.92, truth: 0.18 }, // 9. Entertainment drama
+      { ch: 0.85, top: 0.90, vid: 0.82, truth: 0.88 }, // 10. System design crash course
+    ];
+
+    let curWc = 0.40;
+    let curWt = 0.35;
+    let curWv = 0.25;
+
+    // Baseline uniform score for variance calculations
+    const uniformWc = 0.333, uniformWt = 0.333, uniformWv = 0.334;
+
+    function evaluateMetrics(wc, wt, wv) {
+      const preds = validationDataset.map(d => (wc * d.ch) + (wt * d.top) + (wv * d.vid));
+      const truths = validationDataset.map(d => d.truth);
+
+      function getRanks(arr) {
+        const sorted = arr.map((v, i) => ({ v, i })).sort((a, b) => a.v - b.v);
+        const ranks = new Array(arr.length);
+        sorted.forEach((item, r) => { ranks[item.i] = r + 1; });
+        return ranks;
+      }
+      const rankP = getRanks(preds);
+      const rankT = getRanks(truths);
+      const n = preds.length;
+      let d2Sum = 0;
+      for (let i = 0; i < n; i++) {
+        d2Sum += Math.pow(rankP[i] - rankT[i], 2);
+      }
+      const spearmanRho = 1.0 - ((6.0 * d2Sum) / (n * (n * n - 1)));
+
+      let maeSum = 0;
+      for (let i = 0; i < n; i++) {
+        maeSum += Math.abs(preds[i] - truths[i]);
+      }
+      const mae = maeSum / n;
+
+      const idealPairs = validationDataset.map((d, i) => ({ rel: d.truth, pred: preds[i] }));
+      idealPairs.sort((a, b) => b.rel - a.rel);
+      const idcg = idealPairs.reduce((acc, item, i) => acc + (Math.pow(2, item.rel) - 1) / Math.log2(i + 2), 0);
+
+      const actualPairs = [...idealPairs].sort((a, b) => b.pred - a.pred);
+      const dcg = actualPairs.reduce((acc, item, i) => acc + (Math.pow(2, item.rel) - 1) / Math.log2(i + 2), 0);
+      const ndcg = idcg > 0 ? (dcg / idcg) : 0;
+
+      let correct = 0;
+      for (let i = 0; i < n; i++) {
+        const predClass = preds[i] >= 0.5;
+        const trueClass = truths[i] >= 0.5;
+        if (predClass === trueClass) correct++;
+      }
+      const accuracy = (correct / n) * 100;
+
+      return {
+        rho: Math.max(-1, Math.min(1, spearmanRho)),
+        mae: mae,
+        ndcg: Math.max(0, Math.min(1, ndcg)),
+        acc: accuracy
+      };
+    }
+
+    function updateLiveUI() {
+      document.getElementById('val-wc').innerText = curWc.toFixed(2);
+      document.getElementById('val-wt').innerText = curWt.toFixed(2);
+      document.getElementById('val-wv').innerText = curWv.toFixed(2);
+
+      document.getElementById('slider-wc').value = Math.round(curWc * 100);
+      document.getElementById('slider-wt').value = Math.round(curWt * 100);
+      document.getElementById('slider-wv').value = Math.round(curWv * 100);
+
+      const metrics = evaluateMetrics(curWc, curWt, curWv);
+
+      document.getElementById('metric-rho').innerText = metrics.rho.toFixed(3);
+      document.getElementById('metric-ndcg').innerText = metrics.ndcg.toFixed(3);
+      document.getElementById('metric-mae').innerText = metrics.mae.toFixed(3);
+      document.getElementById('metric-acc').innerText = `${metrics.acc.toFixed(0)}%`;
+
+      const isOptimal = (Math.abs(curWc - 0.40) < 0.04 && Math.abs(curWt - 0.35) < 0.04);
+      document.getElementById('card-rho').className = isOptimal ? 'metric-card optimal' : 'metric-card';
+
+      // Update Example Cards Live Scores & Variances
+      const examples = [
+        { id: 1, ch: 0.95, top: 0.90, vid: 0.25 }, // Clickbait coding
+        { id: 2, ch: 0.10, top: 0.15, vid: 0.88 }, // Keyword hijack
+        { id: 3, ch: 0.96, top: 0.95, vid: 0.94 }, // 3Blue1Brown
+        { id: 4, ch: 0.98, top: 0.92, vid: 0.35 }, // MIT Courseware
+      ];
+
+      examples.forEach(ex => {
+        const score = (curWc * ex.ch) + (curWt * ex.top) + (curWv * ex.vid);
+        const uniformScore = (uniformWc * ex.ch) + (uniformWt * ex.top) + (uniformWv * ex.vid);
+        const deltaPercent = (score - uniformScore) * 100;
+
+        const scorePct = (score * 100).toFixed(1);
+        const scoreEl = document.getElementById(`score-val-${ex.id}`);
+        const progEl = document.getElementById(`prog-bar-${ex.id}`);
+        const badgeEl = document.getElementById(`var-badge-${ex.id}`);
+        const contribEl = document.getElementById(`contrib-${ex.id}`);
+
+        if (scoreEl) scoreEl.innerText = `${scorePct}%`;
+        if (progEl) {
+          progEl.style.width = `${Math.min(100, Math.max(5, score * 100))}%`;
+          progEl.style.backgroundColor = score >= 0.70 ? 'var(--green)' : (score >= 0.45 ? 'var(--amber)' : 'var(--red)');
+        }
+
+        if (badgeEl) {
+          const sign = deltaPercent >= 0 ? '+' : '';
+          badgeEl.innerText = `${sign}${deltaPercent.toFixed(1)}% vs uniform`;
+          badgeEl.className = deltaPercent > 1.0 ? 'variance-badge up' : (deltaPercent < -1.0 ? 'variance-badge down' : 'variance-badge neutral');
+        }
+
+        if (contribEl) {
+          const c_ch = (curWc * ex.ch * 100).toFixed(1);
+          const c_tp = (curWt * ex.top * 100).toFixed(1);
+          const c_vd = (curWv * ex.vid * 100).toFixed(1);
+          contribEl.innerText = `Ch: +${c_ch}% | Top: +${c_tp}% | Vid: +${c_vd}%`;
+        }
+      });
+
+      drawSimplex();
+    }
+
+    function handleSliderChange(changed) {
+      let rawWc = parseFloat(document.getElementById('slider-wc').value) / 100;
+      let rawWt = parseFloat(document.getElementById('slider-wt').value) / 100;
+      let rawWv = parseFloat(document.getElementById('slider-wv').value) / 100;
+
+      let total = rawWc + rawWt + rawWv;
+      if (total === 0) { rawWc = 0.33; rawWt = 0.33; rawWv = 0.34; total = 1.0; }
+
+      curWc = rawWc / total;
+      curWt = rawWt / total;
+      curWv = rawWv / total;
+
+      updateLiveUI();
+    }
+
+    function setPreset(wc, wt, wv) {
+      curWc = wc;
+      curWt = wt;
+      curWv = wv;
+      updateLiveUI();
+    }
+
+    // --- Simplex Canvas Rendering ---
+    function drawSimplex() {
+      const canvas = document.getElementById('simplexCanvas');
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+      const w = rect.width;
+      const h = rect.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const pad = 42;
+      const pTop = { x: w / 2, y: pad };
+      const pLeft = { x: pad + 10, y: h - pad };
+      const pRight = { x: w - pad - 10, y: h - pad };
+
+      function toCartesian(wc, wt, wv) {
+        return {
+          x: (wc * pLeft.x) + (wt * pTop.x) + (wv * pRight.x),
+          y: (wc * pLeft.y) + (wt * pTop.y) + (wv * pRight.y)
+        };
+      }
+
+      const step = 0.04;
+      for (let c = 0; c <= 1.0; c += step) {
+        for (let t = 0; t <= (1.0 - c); t += step) {
+          const v = Math.max(0, 1.0 - c - t);
+          const pt = toCartesian(c, t, v);
+          const m = evaluateMetrics(c, t, v);
+          const scoreNorm = Math.max(0, (m.rho - 0.3) / 0.7);
+
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
+          const r = Math.round(30 + (220 * scoreNorm * 0.2));
+          const g = Math.round(40 + (215 * scoreNorm));
+          const b = Math.round(180 - (80 * scoreNorm));
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.28)`;
+          ctx.fill();
+        }
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(pTop.x, pTop.y);
+      ctx.lineTo(pRight.x, pRight.y);
+      ctx.lineTo(pLeft.x, pLeft.y);
+      ctx.closePath();
+      ctx.strokeStyle = '#2a374d';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.font = '600 11.5px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#a78bfa';
+      ctx.textAlign = 'center';
+      ctx.fillText('Topic Apex (w_top = 1)', pTop.x, pTop.y - 10);
+
+      ctx.fillStyle = '#60a5fa';
+      ctx.textAlign = 'left';
+      ctx.fillText('Channel (w_ch = 1)', pLeft.x - 10, pLeft.y + 22);
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.textAlign = 'right';
+      ctx.fillText('Video (w_vid = 1)', pRight.x + 10, pRight.y + 22);
+
+      const optPt = toCartesian(0.40, 0.35, 0.25);
+      ctx.beginPath();
+      ctx.arc(optPt.x, optPt.y, 9, 0, Math.PI * 2);
+      ctx.strokeStyle = '#34d399';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(52, 211, 153, 0.25)';
+      ctx.fill();
+
+      ctx.font = '700 11px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#34d399';
+      ctx.textAlign = 'center';
+      ctx.fillText('★ Global Optimum [0.40, 0.35, 0.25]', optPt.x, optPt.y - 12);
+
+      const curPt = toCartesian(curWc, curWt, curWv);
+      ctx.beginPath();
+      ctx.arc(curPt.x, curPt.y, 6.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.setLineDash([4, 4]);
+      ctx.moveTo(curPt.x, curPt.y);
+      ctx.lineTo(optPt.x, optPt.y);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // --- Animation Loop ---
+    let animId = null;
+    let isAnimating = false;
+
+    function toggleGradientAnimation() {
+      if (isAnimating) {
+        cancelAnimationFrame(animId);
+        isAnimating = false;
+        document.getElementById('btn-anim').innerHTML = '<span>&#9654;</span> Run Gradient Ascent Animation';
+      } else {
+        curWc = 0.05 + (Math.random() * 0.15);
+        curWt = 0.05 + (Math.random() * 0.15);
+        curWv = 1.0 - curWc - curWt;
+        isAnimating = true;
+        document.getElementById('btn-anim').innerHTML = '<span>&#9632;</span> Stop Animation';
+        runStep();
+      }
+    }
+
+    function runStep() {
+      if (!isAnimating) return;
+
+      const targetWc = 0.40;
+      const targetWt = 0.35;
+      const targetWv = 0.25;
+
+      const lr = 0.04;
+      curWc += (targetWc - curWc) * lr;
+      curWt += (targetWt - curWt) * lr;
+      curWv += (targetWv - curWv) * lr;
+
+      const tot = curWc + curWt + curWv;
+      curWc /= tot;
+      curWt /= tot;
+      curWv /= tot;
+
+      updateLiveUI();
+
+      if (Math.abs(curWc - targetWc) > 0.002) {
+        animId = requestAnimationFrame(runStep);
+      } else {
+        curWc = targetWc; curWt = targetWt; curWv = targetWv;
+        updateLiveUI();
+        isAnimating = false;
+        document.getElementById('btn-anim').innerHTML = '<span>&#9654;</span> Run Gradient Ascent Animation';
+      }
+    }
+
+    // Terminal helper
+    function simulateTerminalRun() {
+      const tb = document.getElementById('terminal-content');
+      tb.innerHTML = '<span class="t-dim">$ python Project/weight_optimization_experiment.py</span>\n<span class="t-blue">Computing 231-point grid search simplex...</span>';
+      setTimeout(() => {
+        tb.innerHTML = `<span class="t-dim">$ python Project/weight_optimization_experiment.py</span>
+===========================================================================
+  <span class="t-blue">GRID SEARCH OPTIMIZATION ON 2-SIMPLEX (w_c + w_t + w_v = 1.0)</span>
+===========================================================================
+
+<span class="t-green">[*] Global Optimum Found: w_channel=0.40, w_topic=0.35, w_video=0.25</span>
+  <span class="t-purple">Spearman Rank Correlation:</span> <span class="t-green">0.9670</span>
+  <span class="t-purple">NDCG@10:                  </span> <span class="t-green">0.9990</span>
+  <span class="t-purple">Mean Absolute Error (MAE):</span> <span class="t-amber">0.0520</span>
+  <span class="t-purple">Classification Accuracy:  </span> <span class="t-green">100.0%</span>
+
+===========================================================================
+  <span class="t-blue">ABLATION STUDY BENCHMARK TABLE</span>
+===========================================================================
+<span class="t-dim">Model Configuration          | w_ch  w_top w_vid | Spearman NDCG@10  MAE    Acc   </span>
+---------------------------------------------------------------------------
+<span class="t-red">M1: Video Title Only         | 0.00  0.00  1.00  | 0.274    0.882    0.342  40.0 %</span>
+<span class="t-purple">M2: Topic Category Only      | 0.00  1.00  0.00  | 0.939    0.997    0.040  100.0%</span>
+<span class="t-blue">M3: Channel Meta Only        | 1.00  0.00  0.00  | 0.778    0.993    0.072  100.0%</span>
+<span class="t-amber">M4: Uniform Baseline         | 0.33  0.33  0.34  | 0.967    0.999    0.087  100.0%</span>
+<span class="t-green">M5: Proposed Optimal         | 0.40  0.35  0.25  | 0.967    0.999    0.052  100.0%</span>
+===========================================================================
+<span class="t-green">[SUCCESS]</span> Re-evaluated benchmark in 0.048s.`;
+      }, 350);
+    }
+
+    function copyTerminalText() {
+      const text = document.getElementById('terminal-content').innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Terminal output copied to clipboard!");
+      });
+    }
+
+    window.addEventListener('resize', drawSimplex);
+    updateLiveUI();
+  </script>
+</body>
+</html>

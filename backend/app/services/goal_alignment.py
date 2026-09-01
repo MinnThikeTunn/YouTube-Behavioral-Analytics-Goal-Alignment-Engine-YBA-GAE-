@@ -288,101 +288,166 @@ class GoalAlignmentEngine:
         recommendations.sort(key=lambda x: x["similarity_score"], reverse=True)
         return score_orm, recommendations
 
+import re
 import urllib.parse
 
-# Curated fallback knowledge base for zero-overhead instant recommendations & focus queues
-CURATED_DISCOVERY_MAP = {
-    "software engineering": {
-        "channels": [
-            {"channel_title": "freeCodeCamp.org", "channel_description": "Full-length course tutorials on Python, React, Web Performance, and System Design.", "similarity_score": 0.96, "channel_url": "https://www.youtube.com/@freecodecamp"},
-            {"channel_title": "Fireship", "channel_description": "High-velocity 100-second code breakdowns, software engineering news, and architecture tips.", "similarity_score": 0.94, "channel_url": "https://www.youtube.com/@Fireship"},
-            {"channel_title": "Hussein Nasser", "channel_description": "Deep-dive software engineering videos covering databases, networking, proxies, and backend architecture.", "similarity_score": 0.92, "channel_url": "https://www.youtube.com/@HusseinNasser-software-engineering"},
-            {"channel_title": "The Primeagen", "channel_description": "Vim, Linux, Rust, and real-world software engineering commentary and algorithm challenges.", "similarity_score": 0.90, "channel_url": "https://www.youtube.com/@ThePrimeTimeagen"},
-            {"channel_title": "Traversy Media", "channel_description": "Practical web development crash courses covering modern JavaScript, APIs, and frameworks.", "similarity_score": 0.88, "channel_url": "https://www.youtube.com/@TraversyMedia"}
-        ],
-        "video_ids": ["eIrMbAQSU34", "8jLOx1hD3_o", "rfscVS0vtbw", "Z1Yd7upQsXY", "HGOBQPFzWKo"]
-    },
-    "data science": {
-        "channels": [
-            {"channel_title": "StatQuest with Josh Starmer", "channel_description": "Clear, visual explanations of machine learning algorithms, statistics, and neural networks.", "similarity_score": 0.95, "channel_url": "https://www.youtube.com/@statquest"},
-            {"channel_title": "3Blue1Brown", "channel_description": "Stunning animated visual mathematics, linear algebra, and neural network deep dives.", "similarity_score": 0.94, "channel_url": "https://www.youtube.com/@3blue1brown"},
-            {"channel_title": "Krish Naik", "channel_description": "End-to-end data science, machine learning, and MLOps project implementations.", "similarity_score": 0.91, "channel_url": "https://www.youtube.com/@krishnaik06"},
-            {"channel_title": "Two Minute Papers", "channel_description": "Awesome 2-minute breakdowns of cutting-edge AI, graphics, and computer vision research papers.", "similarity_score": 0.90, "channel_url": "https://www.youtube.com/@twominutepapers"},
-            {"channel_title": "sentdex", "channel_description": "In-depth practical Python tutorials covering AI, robotics, neural networks, and finance.", "similarity_score": 0.89, "channel_url": "https://www.youtube.com/@sentdex"}
-        ],
-        "video_ids": ["q6PnKGhH_d0", "aircAruvnKk", "Gv9_4yMHFhI", "JcI5Vnw0b2c", "i_LwzRVP7bg"]
-    },
-    "cooking": {
-        "channels": [
-            {"channel_title": "Babish Culinary Universe", "channel_description": "Step-by-step cooking tutorials exploring foundational culinary techniques in Basics with Babish.", "similarity_score": 0.96, "channel_url": "https://www.youtube.com/@babishculinaryuniverse"},
-            {"channel_title": "Joshua Weissman", "channel_description": "Entertaining, scratch-made cooking tutorials and deep culinary fundamentals for home cooks.", "similarity_score": 0.94, "channel_url": "https://www.youtube.com/@joshuaweissman"},
-            {"channel_title": "America's Test Kitchen", "channel_description": "Rigorously tested recipes, kitchen equipment reviews, and food-science backed cooking masterclasses.", "similarity_score": 0.93, "channel_url": "https://www.youtube.com/@americastestkitchen"},
-            {"channel_title": "Gordon Ramsay", "channel_description": "World-renowned chef sharing professional techniques, quick tips, masterclasses, and ultimate tutorials.", "similarity_score": 0.91, "channel_url": "https://www.youtube.com/@gordonramsay"},
-            {"channel_title": "Ethan Chlebowski", "channel_description": "Data-driven cooking focused on the science of flavor, knife skills, and efficient home kitchen workflows.", "similarity_score": 0.89, "channel_url": "https://www.youtube.com/@EthanChlebowski"}
-        ],
-        "video_ids": ["2e1m4sHkOQo", "S9Iud_rO_yE", "PUP7U5vTMM0", "R_T4_2K8848", "vS3_U24A758"]
-    },
-    "health & fitness": {
-        "channels": [
-            {"channel_title": "Jeff Nippard", "channel_description": "Science-backed hypertrophy, biomechanics, and nutrition tutorials by professional natural bodybuilder.", "similarity_score": 0.96, "channel_url": "https://www.youtube.com/@JeffNippard"},
-            {"channel_title": "Renaissance Periodization", "channel_description": "Evidence-based hypertrophy, fat loss, training volume, and exercise science lectures by Dr. Mike Israetel.", "similarity_score": 0.95, "channel_url": "https://www.youtube.com/@RenaissancePeriodization"},
-            {"channel_title": "Huberman Lab", "channel_description": "Neuroscience-backed protocols for sleep, exercise, performance optimization, and physical health.", "similarity_score": 0.92, "channel_url": "https://www.youtube.com/@hubermanlab"},
-            {"channel_title": "Jeremy Ethier", "channel_description": "Scientific anatomical breakdowns of workout techniques and muscle building biomechanics.", "similarity_score": 0.90, "channel_url": "https://www.youtube.com/@JeremyEthier"},
-            {"channel_title": "Athlean-X", "channel_description": "Physical therapy and sports medicine focused strength training and injury prevention.", "similarity_score": 0.88, "channel_url": "https://www.youtube.com/@athleanx"}
-        ],
-        "video_ids": ["dGvDkU_k93Y", "4vXkF9u1Q3E", "BkS1-El_WlE", "aQn9jUjF5dE", "b1C-4B7U99M"]
-    }
-}
+# Backward-compatible map container (Dynamic engine generates live goal-tailored channels without hardcoding)
+CURATED_DISCOVERY_MAP = {}
 
 class RecommendationEngine:
     GEMINI_MODELS = [
+        "gemini-3.1-flash-lite",
+        "gemini-3.1-flash-lite-preview",
         "gemini-3.6-flash",
         "gemini-3.5-flash",
         "gemini-flash-latest",
-        "gemini-3.7-flash"
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-2.5-flash"
     ]
 
     @classmethod
     def generate_and_save_recommendations(cls, db: Session, job_id: str, goal_text: str, user_api_key: Optional[str] = None):
         """
-        Executes hybrid recommendation pipeline once during background processing.
-        Saves both 'watched' (history vector-aligned) and 'discovery' (external LLM/curated)
+        Executes hybrid recommendation pipeline once during background processing or goal change.
+        Saves both 'watched' (history vector-aligned) and 'discovery' (external dynamic AI/tailored channels)
         channel items into the recommended_channels table.
         """
         from app.db.models import RecommendedChannel
         
-        # 1. Watched channels from history (Vector Similarity)
+        # Clear prior recommendations for this job to prevent stale accumulation
+        try:
+            db.query(RecommendedChannel).filter(RecommendedChannel.job_id == job_id).delete(synchronize_session=False)
+            db.commit()
+        except Exception as e:
+            logger.debug(f"Clear prior recommendations note: {e}")
+            db.rollback()
+
+        # 1. Watched channels from history (Real Vector Cosine Similarity)
         try:
             _, watched_recs = GoalAlignmentEngine.evaluate_job_alignment(db, job_id, goal_text)
             for item in watched_recs[:5]:
-                orm_watched = RecommendedChannel(
-                    job_id=job_id,
-                    channel_id=item.get("channel_id"),
-                    channel_title=item["channel_title"],
-                    channel_description=item.get("channel_description"),
-                    similarity_score=item["similarity_score"],
-                    category="watched",
-                    channel_url=item.get("channel_url")
-                )
-                db.add(orm_watched)
+                if item.get("similarity_score", 0) > 0.05:
+                    orm_watched = RecommendedChannel(
+                        job_id=job_id,
+                        channel_id=item.get("channel_id"),
+                        channel_title=item["channel_title"],
+                        channel_description=item.get("channel_description"),
+                        similarity_score=item["similarity_score"],
+                        category="watched",
+                        channel_url=item.get("channel_url")
+                    )
+                    db.add(orm_watched)
         except Exception as e:
             logger.debug(f"Watched channels evaluation note: {e}")
 
-        # 2. Discovery channels (Gemini API with fallback)
+        # 2. Dynamic Discovery channels tailored to user's exact learning goal
         discovery_items = cls.fetch_gemini_discovery_channels(goal_text, user_api_key=user_api_key)
 
         for item in discovery_items[:5]:
             orm_disc = RecommendedChannel(
                 job_id=job_id,
-                channel_title=item.get("channel_title", "Educational Channel"),
-                channel_description=item.get("channel_description", ""),
-                similarity_score=float(item.get("similarity_score", 0.90)),
+                channel_id=item.get("channel_id"),
+                channel_title=item.get("channel_title", f"{goal_text.strip().title()} Learning"),
+                channel_description=item.get("channel_description", f"High-alignment educational content for {goal_text}."),
+                similarity_score=float(item.get("similarity_score", 0.95)),
                 category="discovery",
                 channel_url=item.get("channel_url")
             )
             db.add(orm_disc)
 
         db.commit()
+
+    @classmethod
+    def fetch_youtube_api_channels(cls, goal_text: str, user_api_key: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Queries YouTube Data API v3 search endpoint (type=channel) to discover real, verified YouTube channels
+        tailored to the user's specific learning goal.
+        """
+        from app.config import settings
+        import httpx
+
+        yt_key = user_api_key or os.getenv("YOUTUBE_API_KEY") or getattr(settings, "YOUTUBE_API_KEY", "")
+        if not yt_key:
+            return []
+
+        clean_goal = (goal_text or "General Learning").strip()
+        url = "https://www.googleapis.com/youtube/v3/search"
+        params = {
+            "part": "snippet",
+            "q": clean_goal,
+            "type": "channel",
+            "maxResults": 5,
+            "key": yt_key
+        }
+
+        try:
+            with httpx.Client(timeout=6.0) as client:
+                r = client.get(url, params=params)
+                if r.status_code == 200:
+                    items = r.json().get("items", [])
+                    channels = []
+                    for idx, item in enumerate(items):
+                        snip = item.get("snippet", {})
+                        ch_id = snip.get("channelId")
+                        title = snip.get("title", "")
+                        desc = snip.get("description", "")
+                        if not desc:
+                            desc = f"Official YouTube channel aligned with {clean_goal} tutorials, projects, and guides."
+                        
+                        score = round(max(0.85, 0.96 - (idx * 0.02)), 2)
+                        channels.append({
+                            "channel_id": ch_id,
+                            "channel_title": title,
+                            "channel_description": desc,
+                            "similarity_score": score,
+                            "channel_url": f"https://www.youtube.com/channel/{ch_id}" if ch_id else f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(title)}"
+                        })
+                    if channels:
+                        logger.info(f"Successfully discovered {len(channels)} real YouTube channels via YouTube Data API.")
+                        return channels
+        except Exception as e:
+            logger.debug(f"YouTube API channel search exception: {e}")
+
+        return []
+
+    @classmethod
+    def fetch_youtube_api_focus_videos(cls, goal_text: str, user_api_key: Optional[str] = None) -> List[str]:
+        """
+        Queries YouTube Data API v3 search endpoint (type=video) to find real 11-char video IDs for the goal.
+        """
+        from app.config import settings
+        import httpx
+
+        yt_key = user_api_key or os.getenv("YOUTUBE_API_KEY") or getattr(settings, "YOUTUBE_API_KEY", "")
+        if not yt_key:
+            return []
+
+        clean_goal = (goal_text or "General Learning").strip()
+        url = "https://www.googleapis.com/youtube/v3/search"
+        params = {
+            "part": "snippet",
+            "q": f"{clean_goal} tutorial course",
+            "type": "video",
+            "maxResults": 5,
+            "key": yt_key
+        }
+
+        try:
+            with httpx.Client(timeout=6.0) as client:
+                r = client.get(url, params=params)
+                if r.status_code == 200:
+                    items = r.json().get("items", [])
+                    video_ids = []
+                    for item in items:
+                        vid = item.get("id", {}).get("videoId")
+                        if vid and isinstance(vid, str) and len(vid) == 11:
+                            video_ids.append(vid)
+                    return video_ids
+        except Exception as e:
+            logger.debug(f"YouTube API focus video search exception: {e}")
+
+        return []
 
     @classmethod
     def fetch_gemini_recommendations_and_queue(cls, goal_text: str, user_api_key: Optional[str] = None) -> Optional[Dict[str, Any]]:
@@ -392,7 +457,7 @@ class RecommendationEngine:
         """
         from app.config import settings
         
-        gemini_key = user_api_key or os.getenv("GEMINI_API_KEY") or getattr(settings, "GEMINI_API_KEY", "") or getattr(settings, "YOUTUBE_API_KEY", "")
+        gemini_key = user_api_key or getattr(settings, "GEMINI_API_KEY", "") or os.getenv("GEMINI_API_KEY") or getattr(settings, "YOUTUBE_API_KEY", "")
         if not gemini_key:
             return None
 
@@ -451,9 +516,8 @@ Return strictly valid JSON with this exact structure:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
                 r = httpx.post(url, json=payload, timeout=12.0)
                 if r.status_code == 429:
-                    import time
-                    time.sleep(1.0)
-                    r = httpx.post(url, json=payload, timeout=12.0)
+                    logger.debug(f"Gemini API quota note for {model_name} (429). Trying next model.")
+                    continue
 
                 if r.status_code == 200:
                     resp_json = r.json()
@@ -468,6 +532,9 @@ Return strictly valid JSON with this exact structure:
                         return {"channels": data, "focus_videos": [], "video_ids": []}
                 else:
                     logger.debug(f"Gemini model {model_name} returned status {r.status_code}: {r.text[:200]}")
+            except (httpx.TimeoutException, httpx.ConnectTimeout, httpx.NetworkError) as e:
+                logger.debug(f"Gemini model {model_name} timeout/network error ({e}). Trying next model.")
+                continue
             except Exception as e:
                 logger.debug(f"Gemini model {model_name} attempt failed: {e}")
                 continue
@@ -477,34 +544,22 @@ Return strictly valid JSON with this exact structure:
     @classmethod
     def fetch_gemini_discovery_channels(cls, goal_text: str, user_api_key: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        Queries Gemini Flash models to discover top-tier goal aligned channels.
-        Falls back seamlessly to CURATED_DISCOVERY_MAP if API key is missing or network call fails.
+        Queries Gemini Generative AI to discover top-tier goal-aligned channels solely.
+        NO hardcoded queries, template strings, or stored database cache are used.
         """
-        gemini_data = cls.fetch_gemini_recommendations_and_queue(goal_text, user_api_key=user_api_key)
+        clean_goal = (goal_text or "General Learning").strip()
+        gemini_data = cls.fetch_gemini_recommendations_and_queue(clean_goal, user_api_key=user_api_key)
         if gemini_data and isinstance(gemini_data, dict) and "channels" in gemini_data and len(gemini_data["channels"]) > 0:
             return gemini_data["channels"]
-
-        # Fallback to curated dataset
-        goal_key = goal_text.strip().lower()
-        for k, v in CURATED_DISCOVERY_MAP.items():
-            if k in goal_key or goal_key in k:
-                return v["channels"] if isinstance(v, dict) and "channels" in v else v
-
-        title_cap = goal_text.strip().title()
-        safe_query = urllib.parse.quote_plus(goal_text.strip())
-        return [
-            {"channel_title": f"Mastering {title_cap}", "channel_description": f"Top-rated educational course tutorials and practical guides for {goal_text}.", "similarity_score": 0.95, "channel_url": f"https://www.youtube.com/results?search_query={safe_query}"},
-            {"channel_title": f"{title_cap} Essentials", "channel_description": f"Essential concepts, tutorials, and practical insights for mastering {goal_text}.", "similarity_score": 0.92, "channel_url": f"https://www.youtube.com/results?search_query={safe_query}+tutorial"},
-            {"channel_title": f"{title_cap} Academy", "channel_description": f"Structured learning path and deep dives into {goal_text}.", "similarity_score": 0.90, "channel_url": f"https://www.youtube.com/results?search_query={safe_query}+course"}
-        ]
+        return []
 
     @classmethod
     def get_focus_queue_url(cls, goal_text: str, db: Optional[Session] = None, job_id: Optional[str] = None, user_api_key: Optional[str] = None) -> str:
         """
-        Synthesizes a 1-Click Distraction-Free Focus Queue URL tailored to the user's specific goal via Gemini.
-        Returns a watch_videos queue URL if video IDs are available, or a focused YouTube search queue URL.
+        Synthesizes a 1-Click Distraction-Free Focus Queue URL tailored to the user's specific goal.
+        Returns a watch_videos queue URL if video IDs are available from history/Gemini/YouTube API, or a focused YouTube search queue URL.
         """
-        import re
+        clean_goal = (goal_text or "General Learning").strip()
         playlist_video_ids = []
 
         # 1. Check if user has highly-aligned video records in their history
@@ -523,7 +578,7 @@ Return strictly valid JSON with this exact structure:
         # 2. Query Gemini for domain-specific focus queue video IDs
         if len(playlist_video_ids) < 3:
             try:
-                gemini_data = cls.fetch_gemini_recommendations_and_queue(goal_text, user_api_key=user_api_key)
+                gemini_data = cls.fetch_gemini_recommendations_and_queue(clean_goal, user_api_key=user_api_key)
                 if gemini_data:
                     raw_ids = gemini_data.get("video_ids", [])
                     for vid in raw_ids:
@@ -541,22 +596,22 @@ Return strictly valid JSON with this exact structure:
             except Exception as e:
                 logger.debug(f"Gemini focus queue generation note: {e}")
 
-        # 3. Fallback to curated domain video IDs
+        # 3. Query YouTube Data API search for real video IDs if still under 3
         if len(playlist_video_ids) < 3:
-            goal_key = goal_text.strip().lower()
-            for k, v in CURATED_DISCOVERY_MAP.items():
-                if k in goal_key or goal_key in k:
-                    if isinstance(v, dict) and "video_ids" in v:
-                        for vid in v["video_ids"]:
-                            if vid not in playlist_video_ids:
-                                playlist_video_ids.append(vid)
-                    break
+            try:
+                yt_vids = cls.fetch_youtube_api_focus_videos(clean_goal, user_api_key=user_api_key)
+                for vid in yt_vids:
+                    if vid not in playlist_video_ids:
+                        playlist_video_ids.append(vid)
+            except Exception as e:
+                logger.debug(f"YouTube API focus video lookup note: {e}")
 
         # 4. If valid video IDs found, return watch_videos queue URL
         if playlist_video_ids:
             return f"https://www.youtube.com/watch_videos?video_ids={','.join(playlist_video_ids[:10])}"
 
-        # 5. Default focused search query URL for the user's specific goal
-        safe_query = urllib.parse.quote_plus(f"{goal_text.strip()} tutorial course masterclass")
+        # 5. Default focused search query URL dynamically constructed for the user's specific goal
+        safe_query = urllib.parse.quote_plus(f"{clean_goal} tutorial course masterclass")
         return f"https://www.youtube.com/results?search_query={safe_query}"
+
 

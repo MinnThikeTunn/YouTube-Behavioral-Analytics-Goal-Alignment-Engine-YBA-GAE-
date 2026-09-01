@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 import httpx
 from typing import List, Dict, Any, Optional
@@ -9,6 +10,29 @@ logger = logging.getLogger(__name__)
 
 class TavilySearchService:
     """Service to search live web & YouTube trends using Tavily Search API with Gemini & heuristic fallbacks."""
+
+    JUNK_TITLE_PATTERNS = [
+        re.compile(r"^\d+\s+(best|top|trending)", re.IGNORECASE),
+        re.compile(r"^(the\s+)?\d+\s+best\s+youtube\s+channels", re.IGNORECASE),
+        re.compile(r"^top\s+\d+\s+youtube\s+channels", re.IGNORECASE),
+        re.compile(r"^medium(\s+[-|]|$)", re.IGNORECASE),
+        re.compile(r"^reddit(\s+[-|]|$)", re.IGNORECASE),
+        re.compile(r"^quora(\s+[-|]|$)", re.IGNORECASE),
+        re.compile(r"youtube\s+niches?\s+to\s+(start|make)", re.IGNORECASE),
+        re.compile(r"what\s+are\s+the\s+youtube\s+channels", re.IGNORECASE),
+        re.compile(r"youtube\s+channels?\s+to\s+help", re.IGNORECASE),
+        re.compile(r"trending\s+niches?\s+on\s+youtube", re.IGNORECASE),
+    ]
+
+    @classmethod
+    def _is_junk_title(cls, title: str) -> bool:
+        t = title.strip()
+        if len(t) < 8 or t.lower() in ("medium", "reddit", "youtube", "quora"):
+            return True
+        for pat in cls.JUNK_TITLE_PATTERNS:
+            if pat.search(t):
+                return True
+        return False
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("TAVILY_API_KEY") or getattr(settings, "TAVILY_API_KEY", "")
@@ -181,48 +205,63 @@ class TavilySearchService:
     def search_niche_trends(self, query: Optional[str] = None, goal: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Fetches live trending niche topics for Trend Radar Engine.
-        If a user goal is provided, aligns search queries, prompts, and heuristics with that goal.
+        Directly queries live YouTube video content based strictly on the user's active goal.
         """
-        if goal and not query:
-            search_query = f"{goal} YouTube trending video topics and niche trends 2026"
-        else:
-            search_query = query or "software development AI tech trends 2026"
+        effective_goal = (goal or "").strip() or "General Knowledge"
+        search_query = query or f"site:youtube.com/watch {effective_goal}"
 
-        results = self.search(search_query, max_results=5)
+        results = self.search(search_query, max_results=6)
         trends = []
 
         if results:
+            pos_words = {"great", "best", "boost", "growth", "high", "top", "new", "advanced", "complete", "proven", "effective", "fast"}
+            neg_words = {"drop", "decline", "slow", "hard", "issue", "bug", "risk", "mistake", "fail", "wrong"}
+            stop_words = {"tutorial", "guide", "video", "about", "with", "from", "that", "this", "your", "into", "part", "intro", "basics", "watch", "youtube"}
+
             for idx, res in enumerate(results):
-                title = res.get("title", f"Niche Trend {idx+1}")
+                raw_title = res.get("title", "")
                 content = res.get("content", "")
 
-                niche_name = title.split("-")[0].split("|")[0].strip()
-                if len(niche_name) > 40:
-                    niche_name = niche_name[:40] + "..."
+                # Clean YouTube title artifacts (e.g. " | Channel", " - YouTube", " (Part 1)")
+                clean_name = raw_title.split("|")[0].split("-")[0].strip()
+                clean_name = re.sub(r"#\d+", "", clean_name)
+                clean_name = re.sub(r"\(part\s*\d+\)", "", clean_name, flags=re.IGNORECASE)
+                clean_name = re.sub(r"\s+", " ", clean_name).strip()
 
-                pos_words = ["great", "best", "boost", "growth", "high", "top", "new", "revolution", "future"]
-                neg_words = ["drop", "decline", "slow", "hard", "issue", "bug", "risk"]
-                lower_c = content.lower()
+                if self._is_junk_title(clean_name):
+                    continue
+
+                if len(clean_name) > 50:
+                    clean_name = clean_name[:47] + "..."
+
+                lower_c = (content + " " + raw_title).lower()
                 pos_count = sum(1 for w in pos_words if w in lower_c)
                 neg_count = sum(1 for w in neg_words if w in lower_c)
-                sentiment = round(min(1.0, max(0.2, 0.5 + (pos_count - neg_count) * 0.1)), 2)
+                sentiment = round(min(0.96, max(0.65, 0.75 + (pos_count - neg_count) * 0.05 + (0.03 if idx % 2 == 0 else -0.02))), 2)
 
-                delta_views = round(min(1.5, max(-0.5, 0.3 + (idx % 3) * 0.3 + pos_count * 0.1)), 2)
-                delta_uploads = round(min(1.2, max(-0.3, 0.2 + (idx % 2) * 0.4)), 2)
+                # Dynamic velocity signals based on rank order and sentiment
+                delta_views = round(max(0.6, 1.45 - idx * 0.18 + pos_count * 0.06), 2)
+                delta_uploads = round(max(0.4, 0.95 - idx * 0.12), 2)
 
-                words = [w.strip(",.()") for w in content.split() if len(w) > 4 and w.isalnum()]
-                clusters = list(set(words[:3])) if words else ["trending", "growth", "innovation"]
+                # Extract goal-relevant keyword tokens
+                words = [w.strip(",.()[]:\"'") for w in clean_name.lower().split() if len(w) > 3 and w not in stop_words and w.isalnum()]
+                clusters = list(dict.fromkeys(words))[:3]
+                if not clusters:
+                    clusters = [w.lower() for w in effective_goal.split() if len(w) > 2][:3] or ["guide", "trending", "insights"]
 
                 trends.append({
-                    "niche_name": niche_name,
+                    "niche_name": clean_name,
                     "delta_views": delta_views,
                     "delta_uploads": delta_uploads,
                     "sentiment_ratio": sentiment,
                     "keyword_clusters": clusters
                 })
 
+                if len(trends) >= 4:
+                    break
+
         if not trends:
-            target_desc = f"specifically aligned with the user goal: '{goal}'" if goal else "representing live software/AI/tech niche trends"
+            target_desc = f"specifically aligned with the user goal: '{goal}'" if goal else "representing live trending topics"
             gemini_prompt = f"""
             Return a JSON array of 4 objects representing live YouTube niche trends {target_desc}.
             Each object must have exact keys:
@@ -238,69 +277,43 @@ class TavilySearchService:
                 trends = gemini_res
 
         if not trends:
-            if goal and goal.strip():
-                trends = self._generate_heuristic_niche_trends(goal)
-            else:
-                trends = [
-                    {
-                        "niche_name": "Autonomous AI Coding Agents",
-                        "delta_views": 1.1,
-                        "delta_uploads": 0.8,
-                        "sentiment_ratio": 0.88,
-                        "keyword_clusters": ["agents", "claude-code", "automation"]
-                    },
-                    {
-                        "niche_name": "Rust for High-Performance Backends",
-                        "delta_views": 0.65,
-                        "delta_uploads": 0.45,
-                        "sentiment_ratio": 0.75,
-                        "keyword_clusters": ["rust", "actix", "web-assembly"]
-                    },
-                    {
-                        "niche_name": "Next.js 15 & Server Actions",
-                        "delta_views": 0.8,
-                        "delta_uploads": 0.6,
-                        "sentiment_ratio": 0.82,
-                        "keyword_clusters": ["nextjs", "react", "fullstack"]
-                    },
-                    {
-                        "niche_name": "Local LLMs & Ollama Workflows",
-                        "delta_views": 0.95,
-                        "delta_uploads": 0.75,
-                        "sentiment_ratio": 0.85,
-                        "keyword_clusters": ["ollama", "local-ai", "quantization"]
-                    }
-                ]
+            trends = self._generate_heuristic_niche_trends(effective_goal)
 
         return trends
 
     def search_opportunity_topics(self, query: Optional[str] = None, goal: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Fetches live video opportunity topics and recommended titles.
-        If a user goal is provided, aligns search queries, prompts, and heuristics with that goal.
+        Directly queries live YouTube video content based strictly on the user's active goal.
         """
-        if goal and not query:
-            search_query = f"{goal} high demand YouTube video topics content gaps"
-        else:
-            search_query = query or "high demand software engineering video topics content gaps"
+        effective_goal = (goal or "").strip() or "General Knowledge"
+        search_query = query or f"site:youtube.com/watch {effective_goal}"
 
-        results = self.search(search_query, max_results=5)
+        results = self.search(search_query, max_results=6)
         opportunities = []
 
         if results:
             for idx, res in enumerate(results):
-                raw_title = res.get("title", f"Topic {idx+1}")
-                topic = raw_title.split("-")[0].split("|")[0].strip()
-                if len(topic) > 45:
-                    topic = topic[:45] + "..."
+                raw_title = res.get("title", "")
+                topic = raw_title.split("|")[0].split("-")[0].strip()
+                topic = re.sub(r"#\d+", "", topic)
+                topic = re.sub(r"\(part\s*\d+\)", "", topic, flags=re.IGNORECASE)
+                topic = re.sub(r"\s+", " ", topic).strip()
 
-                demand_index = round(min(9.9, max(5.0, 7.5 + (idx % 3) * 0.8)), 1)
-                competitor_density = round(min(2.0, max(0.1, 0.3 + (idx % 4) * 0.2)), 1)
+                if self._is_junk_title(topic):
+                    continue
 
+                if len(topic) > 50:
+                    topic = topic[:47] + "..."
+
+                demand_index = round(max(7.2, 9.6 - idx * 0.45), 1)
+                competitor_density = round(min(0.85, max(0.25, 0.32 + idx * 0.11)), 2)
+
+                # Purely goal-driven, universal title angles applicable to ANY topic
                 rec_titles = [
-                    f"Mastering {topic} in 2026: Complete Guide",
-                    f"Why You Should Focus on {topic}",
-                    f"Building Real-World Competence in {topic}"
+                    f"The Complete Guide to {topic}",
+                    f"The Mistakes Everyone Makes with {topic} (And How to Fix Them)",
+                    f"What Actually Works for {topic} (Honest Breakdown)"
                 ]
 
                 opportunities.append({
@@ -309,6 +322,9 @@ class TavilySearchService:
                     "competitor_density": competitor_density,
                     "recommended_titles": rec_titles
                 })
+
+                if len(opportunities) >= 4:
+                    break
 
         if not opportunities:
             target_desc = f"specifically tailored for someone with the target goal: '{goal}'" if goal else "representing high-demand tech YouTube video opportunity topics"
@@ -326,47 +342,7 @@ class TavilySearchService:
                 opportunities = gemini_res
 
         if not opportunities:
-            if goal and goal.strip():
-                opportunities = self._generate_heuristic_opportunities(goal)
-            else:
-                opportunities = [
-                    {
-                        "topic": "Building Autonomous AI Coding Agents",
-                        "demand_index": 9.2,
-                        "competitor_density": 0.3,
-                        "recommended_titles": [
-                            "How to Build Autonomous AI Agents from Scratch",
-                            "The Secret to Production-Grade AI Agent Pipelines"
-                        ]
-                    },
-                    {
-                        "topic": "High-Performance FastAPI Architecture",
-                        "demand_index": 8.8,
-                        "competitor_density": 0.5,
-                        "recommended_titles": [
-                            "Sub-10ms FastAPI Architecture Secrets",
-                            "Scaling FastAPI to 100k Req/Sec with Async Workers"
-                        ]
-                    },
-                    {
-                        "topic": "Fullstack Next.js 15 & PostgreSQL",
-                        "demand_index": 8.5,
-                        "competitor_density": 0.8,
-                        "recommended_titles": [
-                            "Next.js 15 Server Actions & Prisma Crash Course",
-                            "Production Next.js 15 Boilerplate in 2026"
-                        ]
-                    },
-                    {
-                        "topic": "Local LLM Inference with Ollama & LangChain",
-                        "demand_index": 9.0,
-                        "competitor_density": 0.4,
-                        "recommended_titles": [
-                            "Deploying Private Local LLMs with Ollama",
-                            "Building RAG Applications with Local Models"
-                        ]
-                    }
-                ]
+            opportunities = self._generate_heuristic_opportunities(effective_goal)
 
         return opportunities
 

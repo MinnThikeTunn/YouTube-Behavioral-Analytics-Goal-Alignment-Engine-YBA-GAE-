@@ -293,3 +293,87 @@ class TestGeminiMultilingualCommentMiner:
             channel_handle="@BurmeseTechHub"
         )
         assert ai_result is None
+
+
+# ── 6. Universal Topic Clustering & 2D Heat Matrix TDD ───────────
+
+class TestUniversalTopicClustering:
+    """Verifies that universal topic classification works seamlessly across non-IT and diverse niches."""
+
+    @pytest.mark.parametrize("text,intent,expected_topic", [
+        # Cooking / Food Channel
+        ("Can you show the ingredients recipe for this curry?", "REQUEST", "Content & Discussion"),
+        ("I tried this recipe at home and the taste was incredible!", "PRAISE", "Technique & Practical Insights"),
+        ("What temperature should the oven be set to?", "CONFUSION", "Technique & Practical Insights"),
+        ("Please make a dessert video next week!", "REQUEST", "Future Ideas & Requests"),
+
+        # Gaming / Entertainment Channel
+        ("The final boss gameplay was so intense and thrilling", "PRAISE", "Content & Discussion"),
+        ("Your commentary and speaking pacing is always hilarious", "PRAISE", "Delivery & Presentation"),
+        ("The microphone audio is distorted and too loud in this stream", "CONFUSION", "Production & Audio-Visual"),
+        ("Are you going to play part 2 tomorrow?", "REQUEST", "Future Ideas & Requests"),
+
+        # Fitness / Sports Channel
+        ("How to do the posture without hurting my lower back?", "REQUEST", "Technique & Practical Insights"),
+        ("The background music is way too loud, can't hear your voice", "CONFUSION", "Production & Audio-Visual"),
+        ("Great workout breakdown and clear explanation", "PRAISE", "Delivery & Presentation"),
+
+        # Burmese Multilingual
+        ("နောက်အပိုင်း ဘယ်တော့ တင်ပေးမှာလဲ bro", "REQUEST", "Future Ideas & Requests"),
+        ("အသံမကြားရဘူး ရုပ်ထွက်လည်း မကြည်ဘူး", "CONFUSION", "Production & Audio-Visual"),
+        ("ရှင်းပြတာ အရမ်းနားလည်လွယ်တယ် ဆရာ", "PRAISE", "Delivery & Presentation"),
+        ("ဒီနည်းလမ်း လက်တွေ့ စမ်းကြည့်တာ အဆင်ပြေတယ်", "PRAISE", "Technique & Practical Insights"),
+        ("ဇာတ်လမ်း အကြောင်းအရာလေး အရမ်းမိုက်တယ်", "PRAISE", "Content & Discussion"),
+    ])
+    def test_classify_topic_universal(self, db_session, text, intent, expected_topic):
+        miner = CommentMinerService(db_session)
+        topic = miner.classify_topic(text, intent=intent)
+        assert topic == expected_topic, f"Failed for '{text}': expected '{expected_topic}', got '{topic}'"
+
+    def test_heatmap_matrix_scaling_not_inflated(self, db_session):
+        """Verifies that a 1-comment cell does not show 100% heat when another cell has 100 comments."""
+        miner = CommentMinerService(db_session)
+
+        # Add 100 PRAISE comments on Content & Discussion
+        praise_comments = [
+            MinedComment(
+                video_id="v1",
+                comment_id=f"p_{i}",
+                text_display=f"Awesome video story episode {i}",
+                intent_label=CommentIntent.PRAISE,
+                sentiment_score=0.8,
+                like_count=10
+            ) for i in range(100)
+        ]
+        # Add 1 CONFUSION comment on Production & Audio-Visual
+        single_conf_comment = MinedComment(
+            video_id="v1",
+            comment_id="c_single",
+            text_display="I cannot hear the microphone sound",
+            intent_label=CommentIntent.CONFUSION,
+            sentiment_score=-0.2,
+            like_count=1
+        )
+        db_session.add_all(praise_comments + [single_conf_comment])
+        db_session.commit()
+
+        result = miner.get_channel_intent_distribution()
+        assert len(result.heatmap) == 20  # 5 topics * 4 intents
+
+        # Find PRAISE on Content & Discussion cell
+        content_praise_cell = next(
+            c for c in result.heatmap
+            if c.topic == "Content & Discussion" and c.intent_label == "PRAISE"
+        )
+        assert content_praise_cell.comment_count == 100
+        assert content_praise_cell.heat_score == 100.0
+
+        # Find CONFUSION on Production & Audio-Visual cell
+        prod_conf_cell = next(
+            c for c in result.heatmap
+            if c.topic == "Production & Audio-Visual" and c.intent_label == "CONFUSION"
+        )
+        assert prod_conf_cell.comment_count == 1
+        # Heat score should be 1.0% (1/100), NOT inflated to 100.0%!
+        assert prod_conf_cell.heat_score == pytest.approx(1.0, abs=0.1)
+

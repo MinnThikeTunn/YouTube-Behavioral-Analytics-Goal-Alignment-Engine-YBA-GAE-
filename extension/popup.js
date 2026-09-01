@@ -25,6 +25,20 @@ document.addEventListener('DOMContentLoaded', () => {
     updateGoalUI(userGoal);
   });
 
+  // Listen for storage changes in real-time
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'local') {
+        if (changes.isPaused !== undefined) {
+          updatePauseStateUI(changes.isPaused.newValue === true);
+        }
+        if (changes.userGoal !== undefined && changes.userGoal.newValue) {
+          updateGoalUI(changes.userGoal.newValue);
+        }
+      }
+    });
+  }
+
   function updatePauseStateUI(isPaused) {
     if (isPaused) {
       statusBadge.className = 'badge paused';
@@ -55,9 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Toggle Pause/Resume handler
-  togglePauseBtn.addEventListener('click', () => {
+  togglePauseBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     chrome.storage.local.get(['isPaused'], (result) => {
-      const newPausedState = !(result.isPaused === true);
+      const isCurrentlyPaused = result.isPaused === true;
+      const newPausedState = !isCurrentlyPaused;
       chrome.storage.local.set({ isPaused: newPausedState }, () => {
         updatePauseStateUI(newPausedState);
       });
@@ -76,6 +92,13 @@ document.addEventListener('DOMContentLoaded', () => {
         saveQuickGoalBtn.innerText = 'Save';
       }, 1500);
     });
+  });
+
+  // Enter key support for quick goal input
+  goalInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      saveQuickGoalBtn.click();
+    }
   });
 
   // Preset tag clicks

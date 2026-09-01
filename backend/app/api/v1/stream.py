@@ -48,6 +48,9 @@ async def sync_stream(payload: StreamTelemetrySchema, db: Session = Depends(get_
         job = Job(id=target_job_id, status=JobStatus.PROCESSING, goal_text=payload.goal_text)
         db.add(job)
         db.commit()
+    elif payload.goal_text and payload.goal_text.strip() and job.goal_text != payload.goal_text.strip():
+        job.goal_text = payload.goal_text.strip()
+        db.commit()
 
     # Deduplicate: check if this is simply a 5-second dwell heartbeat on the same video
     last_record = db.query(RawRecord).filter(

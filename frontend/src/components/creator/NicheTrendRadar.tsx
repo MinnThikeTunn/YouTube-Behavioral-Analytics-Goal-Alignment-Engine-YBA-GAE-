@@ -91,7 +91,7 @@ export const NicheTrendRadar: React.FC<NicheTrendRadarProps> = ({ goal }) => {
               </div>
 
               <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-700/60 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-                <span>Market Sentiment {(data.overall_market_sentiment * 100).toFixed(0)}%</span>
+                <span>Market Sentiment {(((t.sentiment_ratio ?? data.overall_market_sentiment)) * 100).toFixed(0)}%</span>
                 <ArrowUpRight className="w-4 h-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>

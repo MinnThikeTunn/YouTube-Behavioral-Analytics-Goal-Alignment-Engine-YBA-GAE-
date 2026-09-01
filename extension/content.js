@@ -8,6 +8,9 @@ let userGoal = "Software Engineering, Programming, Machine Learning";
 let activeJobId = "stream_job_default";
 let currentVideoId = "";
 let dismissedForVideo = false;
+let isCurrentlyMisaligned = false;
+
+let lastScoreText = "YBA: Monitoring...";
 
 // Sync settings from chrome.storage.local
 function syncSettings() {
@@ -25,10 +28,17 @@ function syncSettings() {
 if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener((changes, areaName) => {
         if (areaName === 'local') {
-            if (changes.isPaused) isPaused = changes.isPaused.newValue === true;
-            if (changes.snoozeUntil) snoozeUntil = Number(changes.snoozeUntil.newValue) || 0;
-            if (changes.userGoal) userGoal = changes.userGoal.newValue;
-            if (changes.activeJobId) activeJobId = changes.activeJobId.newValue;
+            if (changes.isPaused !== undefined) {
+                const wasPaused = isPaused;
+                isPaused = changes.isPaused.newValue === true;
+                if (wasPaused && !isPaused) {
+                    // Instantly trigger telemetry when unpausing
+                    setTimeout(sendTelemetry, 200);
+                }
+            }
+            if (changes.snoozeUntil !== undefined) snoozeUntil = Number(changes.snoozeUntil.newValue) || 0;
+            if (changes.userGoal !== undefined) userGoal = changes.userGoal.newValue;
+            if (changes.activeJobId !== undefined) activeJobId = changes.activeJobId.newValue;
             updateOverlayUIState();
         }
     });
@@ -42,24 +52,33 @@ function updateOverlayUIState() {
     if (!shadowRoot) return;
     const badge = shadowRoot.getElementById('yba-badge');
     const toast = shadowRoot.getElementById('yba-toast');
+    const btnPause = shadowRoot.getElementById('btn-toast-pause');
 
     if (badge) {
         if (isPaused) {
-            badge.innerText = '⏸️ Monitoring Paused';
-            badge.style.background = 'rgba(245, 158, 11, 0.25)';
-            badge.style.borderColor = 'rgba(245, 158, 11, 0.5)';
+            badge.innerText = '⏸️ Monitoring Paused (Click to resume)';
+            badge.style.background = 'rgba(217, 119, 6, 0.95)';
+            badge.style.borderColor = 'rgba(245, 158, 11, 0.6)';
+            badge.style.color = '#ffffff';
         } else if (isSnoozed()) {
             const minsLeft = Math.ceil((snoozeUntil - Date.now()) / 60000);
             badge.innerText = `☕ Break Mode (${minsLeft}m left)`;
-            badge.style.background = 'rgba(45, 212, 191, 0.25)';
-            badge.style.borderColor = 'rgba(45, 212, 191, 0.5)';
+            badge.style.background = 'rgba(43, 166, 64, 0.95)';
+            badge.style.borderColor = 'rgba(74, 222, 128, 0.6)';
+            badge.style.color = '#ffffff';
         } else {
-            badge.style.background = 'rgba(255, 255, 255, 0.1)';
+            badge.innerText = lastScoreText || 'YBA: Monitoring...';
+            badge.style.background = 'rgba(15, 15, 15, 0.92)';
             badge.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            badge.style.color = '#ffffff';
         }
     }
 
-    if (toast && (isPaused || isSnoozed())) {
+    if (btnPause) {
+        btnPause.innerText = isPaused ? '▶️ Resume' : '⏸️ Pause';
+    }
+
+    if (toast && isSnoozed()) {
         toast.style.display = 'none';
     }
 }
@@ -75,48 +94,56 @@ function initOverlay() {
     
     const style = document.createElement('style');
     style.textContent = `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;900&display=swap');
 
         .floating-badge {
             position: fixed;
             bottom: 20px;
             right: 20px;
             z-index: 999998;
-            padding: 10px 18px;
-            border-radius: 24px;
-            background: rgba(19, 20, 21, 0.85);
+            padding: 8px 16px;
+            border-radius: 9999px;
+            background: rgba(15, 15, 15, 0.92);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            color: #f4f4f5;
-            font-family: 'Inter', system-ui, sans-serif;
-            font-weight: 800;
+            color: #ffffff;
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            font-weight: 600;
             font-size: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            transition: all 0.3s ease;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
         }
 
-        /* Non-intrusive Toast UI Notification */
+        .floating-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+        }
+
+        /* High-fidelity Toast UI Notification */
         .toast-notification {
             position: fixed;
             top: 24px;
             right: 24px;
-            width: 360px;
+            width: 350px;
             z-index: 999999;
-            background: rgba(19, 20, 21, 0.94);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(245, 158, 11, 0.4);
-            border-radius: 24px;
+            background: #ffffff;
+            border: 1px solid #dbdbdb;
+            border-radius: 16px;
             padding: 16px;
-            color: #ffffff;
-            font-family: 'Inter', system-ui, sans-serif;
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+            color: #0f0f0f;
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.16);
             display: none;
             flex-direction: column;
-            gap: 10px;
-            animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            gap: 12px;
+            animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            user-select: none;
         }
 
         @keyframes slideInRight {
@@ -137,9 +164,9 @@ function initOverlay() {
         }
 
         .toast-title {
-            font-size: 13px;
-            font-weight: 900;
-            color: #fbbf24;
+            font-size: 14px;
+            font-weight: 700;
+            color: #e1002d;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -148,33 +175,33 @@ function initOverlay() {
         .btn-close {
             background: none;
             border: none;
-            color: #71717a;
-            font-size: 16px;
+            color: #606060;
+            font-size: 14px;
             cursor: pointer;
-            padding: 2px 6px;
-            border-radius: 8px;
-            transition: color 0.2s;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            transition: all 0.2s ease;
         }
 
         .btn-close:hover {
-            color: #ffffff;
-            background: rgba(255, 255, 255, 0.1);
+            color: #0f0f0f;
+            background: #eeeeee;
         }
 
         .toast-body {
             font-size: 12px;
-            color: #d4d4d8;
+            color: #606060;
             line-height: 1.4;
         }
 
         .toast-msg {
-            font-weight: 700;
-            color: #2dd4bf;
-            background: rgba(45, 212, 191, 0.1);
+            font-weight: 600;
+            color: #0f0f0f;
+            background: #f5f5f5;
             padding: 8px 12px;
             border-radius: 12px;
-            border: 1px solid rgba(45, 212, 191, 0.2);
-            margin-top: 4px;
+            border: 1px solid #dbdbdb;
+            margin-top: 6px;
             word-break: break-word;
         }
 
@@ -182,42 +209,54 @@ function initOverlay() {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-top: 4px;
+            margin-top: 2px;
         }
 
         .toast-btn {
             flex: 1;
             font-family: inherit;
             font-size: 11px;
-            font-weight: 700;
+            font-weight: 600;
             padding: 8px 12px;
-            border-radius: 14px;
+            border-radius: 9999px;
             border: none;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 4px;
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .toast-btn-primary {
-            background: #14b8a6;
-            color: #042f2e;
+            background: #e1002d;
+            color: #ffffff;
         }
 
         .toast-btn-primary:hover {
-            background: #2dd4bf;
+            background: #cc0026;
+            box-shadow: 0 2px 6px rgba(225, 0, 45, 0.25);
+        }
+
+        .toast-btn-primary:active {
+            background: #b30000;
+            transform: scale(0.98);
         }
 
         .toast-btn-secondary {
-            background: rgba(255, 255, 255, 0.08);
-            color: #e4e4e7;
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: #eeeeee;
+            color: #0f0f0f;
+            border: 1px solid #dbdbdb;
         }
 
         .toast-btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.15);
+            background: #e8e8e8;
+            border-color: #c6c6c6;
+        }
+
+        .toast-btn-secondary:active {
+            background: #dedede;
+            transform: scale(0.98);
         }
     `;
     shadowRoot.appendChild(style);
@@ -236,15 +275,14 @@ function initOverlay() {
     toast.innerHTML = `
         <div class="toast-header">
             <span class="toast-title">⚠️ Video Not Aligned</span>
-            <button id="btn-toast-dismiss" class="btn-close">✕</button>
+            <button id="btn-toast-dismiss" class="btn-close" title="Dismiss">✕</button>
         </div>
         <div class="toast-body">
             This video content is off-target from your active target goal:
             <div id="toast-msg" class="toast-msg">Not aligned with goal</div>
         </div>
         <div class="toast-actions">
-            <button id="btn-toast-break" class="toast-btn toast-btn-primary">☕ 30m Break</button>
-            <button id="btn-toast-edit" class="toast-btn toast-btn-secondary">🎯 Goal</button>
+            <button id="btn-toast-edit" class="toast-btn toast-btn-primary">🎯 Goal</button>
             <button id="btn-toast-pause" class="toast-btn toast-btn-secondary">⏸️ Pause</button>
         </div>
     `;
@@ -256,29 +294,42 @@ function initOverlay() {
         toast.style.display = 'none';
     });
 
-    shadowRoot.getElementById('btn-toast-break').addEventListener('click', () => {
-        snoozeUntil = Date.now() + (30 * 60 * 1000);
-        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-            chrome.storage.local.set({ snoozeUntil: snoozeUntil });
-        }
-        updateOverlayUIState();
-    });
-
     shadowRoot.getElementById('btn-toast-edit').addEventListener('click', () => {
         window.open('http://localhost:5173/?action=edit_goal', '_blank');
     });
 
     shadowRoot.getElementById('btn-toast-pause').addEventListener('click', () => {
-        isPaused = true;
+        const nextPaused = !isPaused;
+        isPaused = nextPaused;
         if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-            chrome.storage.local.set({ isPaused: true });
+            chrome.storage.local.set({ isPaused: nextPaused });
         }
         updateOverlayUIState();
+        if (!nextPaused) {
+            sendTelemetry();
+            toast.style.display = 'none';
+        }
     });
 
 
     badge.addEventListener('click', () => {
-        // Toggle toast visibility manually on badge click
+        if (isPaused) {
+            // Clicking badge when paused immediately unpauses monitoring
+            isPaused = false;
+            if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+                chrome.storage.local.set({ isPaused: false });
+            }
+            updateOverlayUIState();
+            sendTelemetry();
+            return;
+        }
+
+        // When video is aligned (e.g. 100% ALIGNED), do not pop up the warning component
+        if (!isCurrentlyMisaligned) {
+            return;
+        }
+
+        // Toggle toast visibility manually on badge click only when misaligned
         if (toast.style.display === 'flex' || toast.style.display === 'block') {
             toast.style.display = 'none';
         } else {
@@ -298,19 +349,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (videoId && videoId !== currentVideoId) {
             currentVideoId = videoId;
             dismissedForVideo = false; // Reset dismiss state for new video page
+            isCurrentlyMisaligned = false;
         }
+
+        lastScoreText = `YBA: ${Math.round(score)}% (${classification || 'UNKNOWN'})`;
 
         if (!shadowRoot) return;
         
         const badge = shadowRoot.getElementById('yba-badge');
         if (badge && !isPaused) {
-            badge.innerText = `YBA: ${Math.round(score)}% (${classification || 'UNKNOWN'})`;
+            badge.innerText = lastScoreText;
         }
 
         const toast = shadowRoot.getElementById('yba-toast');
         if (toast && !isPaused) {
             // ONLY pop up toast if content is NOT aligned (score < 35 or DISTRACTING)
             const isMisaligned = score < 35 || classification === 'DISTRACTING';
+            isCurrentlyMisaligned = isMisaligned;
             
             if (isMisaligned && !dismissedForVideo) {
                 const toastMsg = shadowRoot.getElementById('toast-msg');
