@@ -1,41 +1,52 @@
-/* Perplexity design system styling */
+/* YouTube Design System Tokens - DESIGN.md */
 :root {
-  --bg-primary: #121212;
-  --text-primary: #ffffff;
-  --border-radius: 32px;
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-blur: blur(12px);
+  --color-surface: #ffffff;
+  --color-surface-dim: #f5f5f5;
+  --color-surface-container: #f5f5f5;
+  --color-surface-container-high: #eeeeee;
+  --color-on-surface: #0f0f0f;
+  --color-on-surface-variant: #606060;
+  --color-outline: #dbdbdb;
+  --color-primary: #e1002d;
+  --color-primary-hover: #cc0026;
+  --color-secondary: #2ba640;
+  --color-border-radius-full: 9999px;
+  --color-border-radius-card: 16px;
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  font-family: 'Roboto', 'YouTube Sans', Arial, sans-serif;
+  color: var(--color-on-surface);
+  -webkit-font-smoothing: antialiased;
 }
 
 .scraper-container,
-.focus-shield-content,
+.focus-shield-content {
+  border-radius: var(--color-border-radius-card);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-outline);
+  color: var(--color-on-surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
 .floating-badge,
-.btn {
-  border-radius: var(--border-radius);
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
+.btn,
+.chip {
+  border-radius: var(--color-border-radius-full);
 }
 
 .scraper-container {
-  padding: 24px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  padding: 20px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .scraper-container:hover {
-  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 h1, h2, h3 {
-  font-weight: 900;
+  font-family: 'YouTube Sans', 'Roboto', Arial, sans-serif;
+  font-weight: 700;
+  color: var(--color-on-surface);
 }
+

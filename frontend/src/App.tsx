@@ -52,11 +52,24 @@ export const App: React.FC = () => {
       setLoadingAnalytics(true);
     }
     try {
+      const activeLocalGoal = localStorage.getItem('yba_user_goal');
+
       const [data, velocityData, cohortData] = await Promise.all([
-        getAnalyticsResults(jobId),
+        getAnalyticsResults(jobId, activeLocalGoal || undefined),
         getVelocityAnalytics(jobId).catch(() => null),
         getCohortAnalytics(jobId).catch(() => null)
       ]);
+
+      // If user has a saved local goal that differs from backend DB, sync the saved goal to backend SQLite
+      if (activeLocalGoal && activeLocalGoal.trim() && data.goal_text !== activeLocalGoal.trim()) {
+        try {
+          await updateJobGoal(jobId, activeLocalGoal.trim());
+          data.goal_text = activeLocalGoal.trim();
+        } catch (e) {
+          console.warn('Could not sync local goal to backend:', e);
+        }
+      }
+
       setAnalytics(data);
       if (data.goal_text) {
         setCurrentGoal(data.goal_text);
@@ -93,11 +106,9 @@ export const App: React.FC = () => {
         if (syncedGoal && syncedGoal !== currentGoal) {
           setCurrentGoal(syncedGoal);
           localStorage.setItem('yba_user_goal', syncedGoal);
-          if (event.data.type === 'YBA_GOAL_SYNC') {
-            updateJobGoal('stream_job_default', syncedGoal)
-              .then(() => loadAnalyticsData('stream_job_default', true))
-              .catch((err) => console.warn('Could not sync goal from extension to backend:', err));
-          }
+          updateJobGoal('stream_job_default', syncedGoal)
+            .then(() => loadAnalyticsData('stream_job_default', true))
+            .catch((err) => console.warn('Could not sync goal from extension to backend SQLite:', err));
         }
       }
     };

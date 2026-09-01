@@ -9,13 +9,14 @@ if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     const extGoal = result.userGoal;
     const localGoal = localStorage.getItem(GOAL_STORAGE_KEY);
 
-    if (extGoal) {
-      if (localGoal !== extGoal) {
-        localStorage.setItem(GOAL_STORAGE_KEY, extGoal);
-        window.postMessage({ type: 'YBA_GOAL_INITIAL_SYNC', goal: extGoal }, '*');
+    if (localGoal && localGoal.trim()) {
+      // If dashboard has a saved local goal, sync it to extension storage so dashboard is not overridden
+      if (extGoal !== localGoal.trim()) {
+        chrome.storage.local.set({ userGoal: localGoal.trim() });
       }
-    } else if (localGoal) {
-      chrome.storage.local.set({ userGoal: localGoal });
+    } else if (extGoal && extGoal.trim()) {
+      localStorage.setItem(GOAL_STORAGE_KEY, extGoal.trim());
+      window.postMessage({ type: 'YBA_GOAL_INITIAL_SYNC', goal: extGoal.trim() }, '*');
     }
   });
 

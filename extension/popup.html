@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>YBA Goal Alignment Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
@@ -11,7 +14,11 @@
     <!-- Header -->
     <header class="header">
       <div class="brand">
-        <div class="logo-icon">🎯</div>
+        <div class="logo-icon" aria-label="YouTube Brand Icon">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+        </div>
         <div>
           <h1 class="title">YBA Engine</h1>
           <p class="subtitle">Goal Alignment & Shield</p>
@@ -24,9 +31,9 @@
     </header>
 
     <!-- Pause/Resume Control Card -->
-    <div class="card shadow-sm">
+    <div class="card">
       <div class="card-header">
-        <span class="card-label">EXTENSION STATUS</span>
+        <span class="card-label">Extension Status</span>
         <span id="pause-indicator" class="status-indicator running">Monitoring Live</span>
       </div>
       <button id="toggle-pause-btn" class="btn btn-primary btn-block">
@@ -38,7 +45,7 @@
     <!-- Active Target Goal Card -->
     <div class="card highlight-card">
       <div class="card-header">
-        <span class="card-label">CURRENT TARGET GOAL</span>
+        <span class="card-label">Current Target Goal</span>
       </div>
       <div class="goal-preview-box">
         <p id="current-goal-display" class="goal-text">Software Engineering, Programming, Machine Learning</p>
@@ -61,14 +68,14 @@
     </div>
 
     <!-- 1-Click History Backfill Card -->
-    <div class="card shadow-sm">
+    <div class="card">
       <div class="card-header">
-        <span class="card-label">INSTANT ONBOARDING</span>
+        <span class="card-label">Instant Onboarding</span>
       </div>
       <button id="sync-history-btn" class="btn btn-secondary btn-block">
         📥 1-Click Chrome History Sync (50 vids)
       </button>
-      <p id="sync-history-status" style="font-size: 10px; color: #a1a1aa; margin-top: 6px; text-align: center; display: none;"></p>
+      <p id="sync-history-status" class="sync-status-text" style="display: none;"></p>
     </div>
 
     <!-- Footer Links -->

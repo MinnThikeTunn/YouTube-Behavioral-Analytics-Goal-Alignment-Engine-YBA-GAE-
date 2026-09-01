@@ -50,9 +50,13 @@ export const getJobStatus = async (jobId: string): Promise<JobStatusResponseDTO>
   return response.data;
 };
 
-export const getAnalyticsResults = async (jobId: string): Promise<AnalyticsResultDTO> => {
+export const getAnalyticsResults = async (jobId: string, goal?: string, refresh?: boolean): Promise<AnalyticsResultDTO> => {
+  const params: Record<string, any> = {};
+  if (goal) params.goal = goal;
+  if (refresh) params.refresh = refresh;
   const response = await axios.get<AnalyticsResultDTO>(
-    `${API_BASE_URL}/analytics/${jobId}`
+    `${API_BASE_URL}/analytics/${jobId}`,
+    { params }
   );
   return response.data;
 };

@@ -1,8 +1,9 @@
+import re
 import math
 import logging
 from typing import Dict, List, Optional
 import numpy as np
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.db.models import Job, RawRecord, RecordType, EnrichedVideo
@@ -168,7 +169,12 @@ def build_behavioral_nudges(db: Session, job_id: str, metrics: Optional[Computed
 from app.services.job_service import get_job_or_create_default
 
 @router.get("/analytics/{job_id}", response_model=AnalyticsResultDTO)
-def get_analytics_results(job_id: str, db: Session = Depends(get_db)):
+def get_analytics_results(
+    job_id: str,
+    goal: Optional[str] = Query(None, description="Active target goal to dynamically align results with"),
+    refresh: bool = Query(False, description="Force refresh dynamic recommendations"),
+    db: Session = Depends(get_db)
+):
     """
     Returns pre-computed analytics results directly from DB in <5ms.
     Everything is dynamically calculated from your uploaded history.
@@ -179,6 +185,11 @@ def get_analytics_results(job_id: str, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job with ID '{job_id}' not found."
         )
+
+    if goal and isinstance(goal, str) and goal.strip() and job.goal_text != goal.strip():
+        job.goal_text = goal.strip()
+        db.commit()
+        refresh = True
 
     metrics_dto = None
     if job.computed_metrics:
@@ -202,24 +213,34 @@ def get_analytics_results(job_id: str, db: Session = Depends(get_db)):
 
     goal_text = job.goal_text or "Software Engineering, Programming, Machine Learning"
 
-    if not job.recommended_channels:
-        try:
-            RecommendationEngine.generate_and_save_recommendations(db, job.id, goal_text, job.user_api_key)
-            db.refresh(job)
-        except Exception as e:
-            logger.error(f"Error auto-generating recommendations for job {job.id}: {e}")
+    # Dynamic Discovery channels generated directly via Gemini on the fly for the active goal
+    discovery_items = RecommendationEngine.fetch_gemini_discovery_channels(goal_text, user_api_key=job.user_api_key)
+    discovery_dtos = [
+        RecommendedChannelDTO(
+            channel_id=item.get("channel_id"),
+            channel_title=item["channel_title"],
+            channel_description=item.get("channel_description"),
+            similarity_score=float(item.get("similarity_score", 0.95)),
+            category="discovery",
+            channel_url=item.get("channel_url")
+        )
+        for item in discovery_items[:5]
+    ]
 
-    recommendations_dto = [
+    watched_dtos = [
         RecommendedChannelDTO(
             channel_id=rec.channel_id,
             channel_title=rec.channel_title,
             channel_description=rec.channel_description,
             similarity_score=rec.similarity_score,
-            category=rec.category or "watched",
+            category="watched",
             channel_url=rec.channel_url
         )
-        for rec in job.recommended_channels
+        for rec in (job.recommended_channels or [])
+        if rec.category == "watched"
     ]
+
+    recommendations_dto = discovery_dtos + watched_dtos
     categories_dto = build_topic_breakdown(db, job.id)
     hourly_heatmap_dto = build_hourly_heatmap(db, job.id, goal_text)
     nudges_dto = build_behavioral_nudges(db, job.id, metrics_dto, goal_text)
