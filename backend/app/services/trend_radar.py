@@ -9,14 +9,22 @@ class TrendRadarEngine:
         self.w3 = w3
         
     def calculate_velocity(self, delta_views: float, delta_uploads: float, sentiment_ratio: float) -> float:
-        return self.w1 * delta_views + self.w2 * delta_uploads + self.w3 * sentiment_ratio
+        raw_val = self.w1 * delta_views + self.w2 * delta_uploads + self.w3 * sentiment_ratio
+        # Scale to realistic velocity percentage if raw_val is normalized (e.g. 0.5-1.8 -> 50%-180%)
+        if raw_val <= 3.0:
+            return round(raw_val * 100.0, 1)
+        return round(raw_val, 1)
         
     def determine_trajectory(self, velocity: float) -> str:
-        if velocity >= 0.8:
+        thresh_exploding = 80.0 if velocity > 3.0 else 0.8
+        thresh_rising = 40.0 if velocity > 3.0 else 0.4
+        thresh_stable = 0.0 if velocity > 3.0 else -0.2
+
+        if velocity >= thresh_exploding:
             return "EXPLODING"
-        elif velocity >= 0.4:
+        elif velocity >= thresh_rising:
             return "RISING"
-        elif velocity >= -0.2:
+        elif velocity >= thresh_stable:
             return "STABLE"
         else:
             return "DECLINING"

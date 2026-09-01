@@ -226,7 +226,7 @@ export const App: React.FC = () => {
             velocityAnalytics={velocityAnalytics}
             cohortAnalytics={cohortAnalytics}
             jobStatus={completedJob}
-            goalText={analytics.goal_text || currentGoal}
+            goalText={currentGoal || analytics.goal_text || ''}
             onReset={handleReset}
             onEditGoal={() => setViewMode('GOAL_SETUP')}
           />
